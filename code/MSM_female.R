@@ -25,7 +25,7 @@ for(ilib in libs){
 
 #================================================== Residency Data, 2002 to 2018 ==================================================#
 
-NUHDSS_Resi_Data_2002_2015 <- readRDS("~/Evans/NUHDSS_Final_MSM.rds")
+NUHDSS_Resi_Data_2002_2015 <- readRDS("D:\\APHRC\\APHRC-projects\\MSM\\MSM-Residence-2024\\Data\\NUHDSS_Final_MSM.rds")
 
 
 #========================================= transition matrix ========================================================
@@ -79,7 +79,7 @@ msm_model_female <- msm(Event_1 ~ days, ID, data = Female_data , exacttimes = TR
 
 msm_model_female
 
-save(msm_model_female, file="~/Evans/msm_model_female.RData")
+save(msm_model_female, file="D:\\APHRC\\APHRC-projects\\MSM\\MSM-Residence-2024\\Data\\msm_model_female.RData")
 
 
 qmatrix.msm(msm_model_female)

@@ -1,9 +1,10 @@
-#============================================== Loading the libraries =====================================================
+#-------------------------------------------Loading the libraries-----------------------------------------------------#
 
 libs <- c("haven", "mice", "dplyr", "tidyverse", "finalfit", "writexl", "lme4", "foreign", "readxl", "broom", 
           "gtsummary", "gt", "sjlabelled", "data.table", "DiagrammeRsvg", "DiagrammeR", "gridExtra", "grid", 
           "tidymodels", "msm", "flexsurv", "minqa", "survival", "mstate", "lattice", "latticeExtra", 
           "RColorBrewer", "diagram", "openxlsx", "janitor", "Hmisc", "magrittr", "devtools")
+
 
 for(ilib in libs){
   if(!(ilib %in% installed.packages())){
@@ -12,99 +13,73 @@ for(ilib in libs){
   library(ilib, character.only = T)
 }
 
+#--------------------------------------------Residency Data, 2002 to 2018---------------------------------------------#
 
-pacman::p_load(easystats, INLA) # forest plot
-
-#library("devtools")
-#devtools::install_github(repo = "https://github.com/hrue/r-inla", ref = "stable", subdir = "rinla", build = FALSE)
+NUHDSS_Resi_Data  <- readRDS("D:\\APHRC\\APHRC-projects\\MSM\\MSM-Residence-2024\\Data\\NUHDSS_Final_Event_Data.rds")
 
 
-#===================================== Residency Data, 2002 to 2018 ======================================================#
-
-NUHDSS_Resi_Data_2002_2018  <- readRDS("D:\\APHRC\\APHRC-projects\\NUHDSS\\Residence_data\\NUHDSS_Final_Event_Data.rds")
+#---------------------------------Convert unique HHIDs to numerical values-------------------------------------------#
 
 
-## =========================  Convert unique HHIDs to numerical values ======================================================
+NUHDSS_Resi_Data$HHID <- as.numeric(factor(NUHDSS_Resi_Data$NUHDSS_socialgroup,
+                          levels = unique(NUHDSS_Resi_Data$NUHDSS_socialgroup)))
 
-NUHDSS_Resi_Data_2002_2018$HHID <- as.numeric(factor(NUHDSS_Resi_Data_2002_2018$NUHDSS_socialgroup,
-                          levels = unique(NUHDSS_Resi_Data_2002_2018$NUHDSS_socialgroup)))
+#make the ID begin from 300000 to make it different from other
 
-#=== make the ID begin from 300000 to make it different from other
-
-NUHDSS_Resi_Data_2002_2018$HHID <- NUHDSS_Resi_Data_2002_2018$HHID + 300000 - min(NUHDSS_Resi_Data_2002_2018$HHID) + 1
+NUHDSS_Resi_Data$HHID <- NUHDSS_Resi_Data$HHID + 300000 - min(NUHDSS_Resi_Data$HHID) + 1
 
 #Make it the first column. 
 
-NUHDSS_Resi_Data_2002_2018 <- NUHDSS_Resi_Data_2002_2018[, c("HHID", setdiff(names(NUHDSS_Resi_Data_2002_2018), "HHID"))]
+NUHDSS_Resi_Data <- NUHDSS_Resi_Data[, c("HHID", setdiff(names(NUHDSS_Resi_Data), "HHID"))]
 
 
-#=drop the NUHDSS social ID
+#drop the NUHDSS social ID
 
-#========================================= Drop some columns ==============================================================
+#------------------------------------------Drop some columns----------------------------------------------------------#
 
 column_to_drop <-  "NUHDSS_socialgroup"
 
 
-NUHDSS_Resi_Data_2002_2018 <- NUHDSS_Resi_Data_2002_2018[, !(names(NUHDSS_Resi_Data_2002_2018) %in% column_to_drop)]
+NUHDSS_Resi_Data <- NUHDSS_Resi_Data[, !(names(NUHDSS_Resi_Data) %in% column_to_drop)]
 
 
-#======================================= Remove the inconsistencies ========================================================
+#----------------------------------------Remove the inconsistencies---------------------------------------------------#
+
+NUHDSS_Resi_Data$residency_event[NUHDSS_Resi_Data$ID==55399 & NUHDSS_Resi_Data$residency_event_date=="2003-11-05"]<-"Entry"
+NUHDSS_Resi_Data$residency_event[NUHDSS_Resi_Data$ID==77316 & NUHDSS_Resi_Data$residency_event_date=="2006-04-11"]<-"Entry"
+NUHDSS_Resi_Data$residency_event[NUHDSS_Resi_Data$ID==34017 & NUHDSS_Resi_Data$residency_event_date=="2015-11-06"]<-"Inmigration"
+NUHDSS_Resi_Data$residency_event[NUHDSS_Resi_Data$ID==11294 & NUHDSS_Resi_Data$residency_event_date=="2009-02-27"]<-"Inmigration"
+NUHDSS_Resi_Data$residency_event[NUHDSS_Resi_Data$ID==55399 & NUHDSS_Resi_Data$residency_event_date=="2004-10-11"]<-"Inmigration"
+NUHDSS_Resi_Data$residency_event[NUHDSS_Resi_Data$ID==59297 & NUHDSS_Resi_Data$residency_event_date=="2012-03-06"]<-"Inmigration"
+NUHDSS_Resi_Data$residency_event[NUHDSS_Resi_Data$ID==77316 & NUHDSS_Resi_Data$residency_event_date=="2007-05-11"]<-"Inmigration"
 
 
-NUHDSS_Resi_Data_2002_2018$residency_event[NUHDSS_Resi_Data_2002_2018$ID==55399 & NUHDSS_Resi_Data_2002_2018$residency_event_date=="2003-11-05"]<-"Entry"
-NUHDSS_Resi_Data_2002_2018$residency_event[NUHDSS_Resi_Data_2002_2018$ID==77316 & NUHDSS_Resi_Data_2002_2018$residency_event_date=="2006-04-11"]<-"Entry"
-NUHDSS_Resi_Data_2002_2018$residency_event[NUHDSS_Resi_Data_2002_2018$ID==34017 & NUHDSS_Resi_Data_2002_2018$residency_event_date=="2015-11-06"]<-"Inmigration"
-NUHDSS_Resi_Data_2002_2018$residency_event[NUHDSS_Resi_Data_2002_2018$ID==11294 & NUHDSS_Resi_Data_2002_2018$residency_event_date=="2009-02-27"]<-"Inmigration"
-NUHDSS_Resi_Data_2002_2018$residency_event[NUHDSS_Resi_Data_2002_2018$ID==55399 & NUHDSS_Resi_Data_2002_2018$residency_event_date=="2004-10-11"]<-"Inmigration"
-NUHDSS_Resi_Data_2002_2018$residency_event[NUHDSS_Resi_Data_2002_2018$ID==59297 & NUHDSS_Resi_Data_2002_2018$residency_event_date=="2012-03-06"]<-"Inmigration"
-NUHDSS_Resi_Data_2002_2018$residency_event[NUHDSS_Resi_Data_2002_2018$ID==77316 & NUHDSS_Resi_Data_2002_2018$residency_event_date=="2007-05-11"]<-"Inmigration"
+#--------------------------------Remove the duplicated IDs and the event date-----------------------------------------#
 
+NUHDSS_Resi_Data <- NUHDSS_Resi_Data[!duplicated(NUHDSS_Resi_Data[c("ID", "residency_event_date")]),]
 
-#=============================== Remove the duplicated IDs and the event date =============================================
+#------------------------------Inconsistencies arising to all values NA in ruling govt--------------------------------#
 
-NUHDSS_Resi_Data_2002_2018 <- NUHDSS_Resi_Data_2002_2018[!duplicated(NUHDSS_Resi_Data_2002_2018[c("ID", "residency_event_date")]),]
+NUHDSS_Resi_Data <- NUHDSS_Resi_Data[!is.na(NUHDSS_Resi_Data$ruling_government),]
 
-#================================ Inconsistencies arising to all values NA in ruling govt==================================
+#------------------------------------------------subset---------------------------------------------------------------#
 
-NUHDSS_Resi_Data_2002_2018 <- NUHDSS_Resi_Data_2002_2018[!is.na(NUHDSS_Resi_Data_2002_2018$ruling_government),]
-
-#==================================================== subset ==============================================================
-
-NUHDSS_Resi_Data_2002_2015 <- NUHDSS_Resi_Data_2002_2018 %>% 
+NUHDSS_Resi_Data_2002_2015 <- NUHDSS_Resi_Data %>% 
   mutate(Calender_Year = as.numeric(as.character(Calender_Year))) %>% 
   subset(Calender_Year >= 2002 & Calender_Year <= 2015)
 
 
-
 NUHDSS_Resi_Data_2002_2015 <- NUHDSS_Resi_Data_2002_2015 %>%   arrange(ID, residency_event_date)
 
-
-
-#saveRDS(NUHDSS_Resi_Data_2002_2018, "D:\\OneDrive\\OneDrive - aphrc.org\\APHRC-Data\\NUHDSS-Residence\\NUHDSS_Data_Residence_15_24.rds")
-
-
-#================================================ Create an event class  ===================================================
+#---------------------------------------------Create an event class---------------------------------------------------#
 
 Events <- c("Enumeration","Birth", "Exit","Entry", "Outmigration","Inmigration", "Death")
 
 NUHDSS_Resi_Data_2002_2015$Event <- factor(NUHDSS_Resi_Data_2002_2015$residency_event, levels = Events)
 
 
-#=====check the inconsistencies
-# 
-# NUHDSS_Resi_Data_2002_2018_1<-NUHDSS_Resi_Data_2002_2018[, c("ID","residency_event_date", "Event")]
-# 
-# NUHDSS_Resi_Data_2002_2018_1<-NUHDSS_Resi_Data_2002_2018_1 %>%  group_by(ID) %>%
-#   mutate(newEV=lag(Event,1))
-# 
-# NUHDSS_Resi_Data_2002_2018_1 %>%  filter(newEV=="Outmigration" & Event== "Entry") %>%  View()
-# 
-# #view each ID
-# View(dat[dat$ID==77316,])
 
-#correct them 
-
-#========================================= add age group ==================================================================
+#-----------------------------------------------add age group---------------------------------------------------------#
 
 breaks <- c(0, 15, 20, 36, 51, Inf)
 labels <- c('0-14', '15-19', '20-35', '36-50', '51+')
@@ -113,7 +88,7 @@ NUHDSS_Resi_Data_2002_2015$age_cat <- cut(NUHDSS_Resi_Data_2002_2015$age_in_comp
                                           breaks = breaks, labels = labels, right = FALSE)
 
 
-#====================================== Convert  Kisii ethinic to others ==================================================
+#----------------------------------------Convert  Kisii ethnic to others----------------------------------------------#
 
 NUHDSS_Resi_Data_2002_2015 <- NUHDSS_Resi_Data_2002_2015 %>% mutate(ethnicity_of_NUHDSS_individual =  
     case_when(ethnicity_of_NUHDSS_individual == 'Kisii' ~ "Other",
@@ -121,7 +96,7 @@ NUHDSS_Resi_Data_2002_2015 <- NUHDSS_Resi_Data_2002_2015 %>% mutate(ethnicity_of
   ))
 
 
-#========================================= Type of income generating activity =============================================
+#-----------------------------------------Type of income generating activity------------------------------------------#
 
 NUHDSS_Resi_Data_2002_2015 <- NUHDSS_Resi_Data_2002_2015 %>%
   mutate(type_of_income_generating_activity = case_when(
@@ -137,7 +112,7 @@ NUHDSS_Resi_Data_2002_2015 <- NUHDSS_Resi_Data_2002_2015 %>%
   ))
 
 
-#======================================= Type of area in Kenya in which someone was born ==================================
+#--------------------------------Type of area in Kenya in which someone was born--------------------------------------#
 
 NUHDSS_Resi_Data_2002_2015 <- NUHDSS_Resi_Data_2002_2015 %>% 
   mutate(type_of_area_in_Kenya_in_which_individual_was_born =  
@@ -146,37 +121,31 @@ NUHDSS_Resi_Data_2002_2015 <- NUHDSS_Resi_Data_2002_2015 %>%
   TRUE ~ as.character(type_of_area_in_Kenya_in_which_individual_was_born)))
 
 
-
-
-#========================================== chain of movement for model ====================================================
+#-----------------------------------------chain of movement for model-------------------------------------------------#
 
 (smatrix<-statetable.msm(Event, ID, data=NUHDSS_Resi_Data_2002_2015)) # for modelling later
 
 
-
-
-
-#================================ Descriptive statistics for constant variables ============================================
+#----------------------------------------Descriptive statistics for constant variables--------------------------------#
 
 # Select only constant variables
 
 constant_vars <- c("ID", "gender_of_NUHDSS_individual", "ethnicity_of_NUHDSS_individual", 
                    "type_of_area_in_Kenya_in_which_individual_was_born")
 
-#=Subset the data with constant variables
+#Subset the data with constant variables
 
 NUHDSS_Residency_subset_dataset <- NUHDSS_Resi_Data_2002_2015 %>%filter(ID %in% unique(NUHDSS_Resi_Data_2002_2015$ID)) %>%
   distinct(ID, .keep_all = TRUE) %>% select(one_of(constant_vars))
 
-#=Set the theme to get more decimal points for %
+#Set the theme to get more decimal points for %
 
 set_gtsummary_theme(list(
-  "tbl_summary-fn:percent_fun" = scales::label_percent(accuracy = 0.1),
-  "tbl_summary-str:categorical_stat" = "{n} ({p})"
+  "tbl_summary-fn:percent_fun" = scales::label_percent(accuracy = 0.1)
 ))
 
 
-#== Obtain the summary statistics 
+# Obtain the summary statistics 
 
 NUHDSS_Residency_subset_dataset %>%
   select(-c("ID") )%>% tbl_summary(by = gender_of_NUHDSS_individual,
@@ -184,7 +153,7 @@ NUHDSS_Residency_subset_dataset %>%
     digits = all_continuous() ~ 2
   ) %>%    modify_caption("NUHDSS Characteristics (N = {N})") %>%  as_gt() #-> tab_1
 
-#====================================== including the years ===============================================================
+#-----------------------------------------including the years---------------------------------------------------------#
 
 constant_vars_yr <- c("ID", "slum_area_in_NUHDSS", "gender_of_NUHDSS_individual", "ethnicity_of_NUHDSS_individual", 
                       "type_of_area_in_Kenya_in_which_individual_was_born", "age_in_completed_years", "Event",
@@ -193,21 +162,19 @@ constant_vars_yr <- c("ID", "slum_area_in_NUHDSS", "gender_of_NUHDSS_individual"
 NUHDSS_Residency_subset_dataset_year <- NUHDSS_Resi_Data_2002_2015 %>%
   distinct(ID, Calender_Year, .keep_all = TRUE) %>%  select(one_of(constant_vars_yr))
 
-tab_NUHDSS_individual <- NUHDSS_Residency_subset_dataset_year %>%  
-  select(-c("ID") ) %>%  tbl_summary( by = Calender_Year, 
+tab_NUHDSS_individual <- NUHDSS_Residency_subset_dataset_year %>%  select(-c("ID") ) %>%  
+  tbl_summary( by = Calender_Year, 
     statistic = list(all_continuous() ~ "{median} ({IQR})", all_categorical() ~ "{n} / {N} ({p})"),
     digits = all_continuous() ~ 2) %>% add_p() %>% 
   modify_caption("HDSS Characteristics  (N = {N})")
 
 tab_NUHDSS_individual %>% as_gt() #-> tab_2
 
-#tab_2 <- as.data.frame(tab_2)
-
-#write_xlsx(tab_2, "D:\\OneDrive\\OneDrive - aphrc.org\\APHRC-Data\\NUHDSS-Residence\\Tab_constant_vars.xlsx")
 
 
-table_all_constants <-  NUHDSS_Residency_subset_dataset_year %>%  
-  select(-c("ID") ) %>% tbl_summary(by =  Calender_Year, missing = "no") %>%  add_p() %>% 
+
+table_all_constants <-  NUHDSS_Residency_subset_dataset_year %>% select(-c("ID") ) %>% 
+  tbl_summary(by =  Calender_Year, missing = "no") %>%  add_p() %>% 
   modify_header(label = "**Variable**") %>% bold_labels(); table_all_constants
 
 
@@ -215,12 +182,10 @@ table_all_time_var <-  tbl_summary(NUHDSS_Resi_Data_2002_2015,
   include = c(type_of_income_generating_activity, age_in_completed_years), by  = Calender_Year) %>% 
   add_p() %>%  modify_header(label = "**Variable**") %>% bold_labels(); table_all_time_var
 
-#table_all_time_var <- as.data.frame(table_all_time_var)
-
-#write_xlsx(table_all_time_var, "D:\\OneDrive\\OneDrive - aphrc.org\\APHRC-Data\\NUHDSS-Residence\\Tab_time_vars.xlsx")
 
 
-#================================== Graph showing the trend of gender from 2002 to 2018 ======================================================
+
+#--------------------------------Graph showing the trend of gender from 2002 to 2018----------------------------------#
 
 # Convert calendar_year to factor with all levels from 2002 to 2018
 
@@ -248,7 +213,7 @@ ggplot(gender_data, aes(x = Calender_Year, y = num_individuals, color = gender_o
         legend.text = element_text(face = "bold"), legend.title = element_text(face = "bold"))
 
 
-#================================== Graph showing the trend of ethnicity from 2002 to 2018 ======================================================
+#-------------------------------Graph showing the trend of ethnicity from 2002 to 2018--------------------------------#
 
 Ethnicity_data <- NUHDSS_Resi_Data_2002_2015 %>% group_by(ethnicity_of_NUHDSS_individual, Calender_Year) %>%
   summarise(num_individuals = n_distinct(ID), .groups = "drop")
@@ -276,7 +241,7 @@ ggplot(Ethnicity_data, aes(x = Calender_Year, y = num_individuals, color = ethni
         legend.text = element_text(face = "bold"), legend.title = element_text(face = "bold"))
 
 
-#=============== Graph showing the trend of type of area an individual was born from 2002 to 2018 =========================
+#---------------------Graph showing the trend of type of area an individual was born from 2002 to 2018----------------#
 
 
 # Calculate the number of individual born in different places per year
@@ -306,7 +271,7 @@ ggplot(Area_data, aes(x = Calender_Year, y = num_individuals,
         legend.text = element_text(face = "bold"),  legend.title = element_text(face = "bold"))
 
 
-#======================== trend of total number of individuals per year ===================================================
+#-----------------------trend of total number of individuals per year-------------------------------------------------#
 
 # Calculate the total number of individuals per year
 
@@ -329,10 +294,7 @@ ggplot(total_individuals_data, aes(x = Calender_Year, y = total_individuals)) + 
   theme(axis.text.x = element_text(face = "bold", size = 10), axis.text.y = element_text(face = "bold", size = 10),
         axis.title.x = element_text(face = "bold"), axis.title.y = element_text(face = "bold"))
 
-
-#================================== Population by age group ===============================================================
-
-
+#-----------------------------------Population by age group-----------------------------------------------------------#
 
 
 #percentage of population per gender per calender year
@@ -346,7 +308,7 @@ age_groupss <- c("<1","1-4", "5-9", "10-14", "15-19", "20-24", "25-29", "30-34",
 
 gender_percentage$age_group <- factor(gender_percentage$age_group,     levels = age_groupss)
 
-#===pyramid
+#pyramid
 
 ggplot(data = gender_percentage, 
   mapping = aes(x = ifelse(test = gender_of_NUHDSS_individual == "Male", yes = -percentage, no = percentage), 
@@ -359,7 +321,7 @@ ggplot(data = gender_percentage,
   facet_wrap(~ Calender_Year, ncol = 5)
 
 
-#=======using age category created  
+#using age category created  
 
 #percentage of population per gender per calender year
 gender_percentage_1 <- NUHDSS_Resi_Data_2002_2015 %>%
@@ -372,7 +334,7 @@ age_groups_1 <- c("0-14", "15-19", "20-35", "36-50", "51+")
 
 gender_percentage_1$age_cat <- factor(gender_percentage_1$age_cat,     levels = age_groups_1)
 
-#===pyramid
+#pyramid
 
 ggplot(data = gender_percentage_1, 
        mapping = aes(x = ifelse(test = gender_of_NUHDSS_individual == "Male", yes = -percentage, no = percentage), 
@@ -385,7 +347,7 @@ ggplot(data = gender_percentage_1,
   facet_wrap(~ Calender_Year, ncol = 5)
 
 
-#================================== Residency Events of individuals per year ===============================================
+#--------------------------------Residency Events of individuals per year---------------------------------------------#
 
 # Filter data for specific residency events
 
@@ -411,7 +373,7 @@ table_gt <- gt(event_counts_wide) %>%  tab_header(
 
 
 
-#================================================== yearly average ========================================================
+#----------------------------------------Yearly average----------------------------------------------------------------#
 
 event_counts_1 <- filtered_data %>% group_by(residency_event_date, Calender_Year, residency_event) %>% 
   summarise(Count = n(), .groups = "drop") %>%  ungroup() # replace ID with if uou need to see inconsistencies 
@@ -439,9 +401,6 @@ median_per_year <- event_counts_1 %>% group_by(Calender_Year, residency_event) %
   mutate(P_value =  sprintf("%.4f", p_value)) %>% select(-Median, -q1, -q3, -p_value) %>% 
   mutate_at(vars(Calender_Year), as.factor) %>%  gt(); median_per_year
 
-#median_per_year <- as.data.frame(median_per_year)
-
-#write.csv(median_per_year, "D:\\APHRC\\APHRC-projects\\NUHDSS\\Residence_data\\median_per_year.csv")
 
 # Count the number of rounds per year
 
@@ -467,8 +426,7 @@ enumerations_round_0 <- subset(NUHDSS_Resi_Data_2002_2015,
 
 
 
-#============================== birth and death rates per slum per gender ================================================
-
+#---------------------------------birth and death rates per slum per gender-------------------------------------------#
 
 #Number of individuals per slum per year
 
@@ -517,7 +475,7 @@ death_trend_line_plot <- ggplot(rates_slum_gender, aes(x = factor(Calender_Year)
   scale_x_discrete(breaks = unique(rates_slum_gender$Calender_Year)); death_trend_line_plot
 
 
-#================================ Birth and death rates per gender ===================================================
+#------------------------------------Birth and death rates per gender-------------------------------------------------#
 
 
 total_ids_per_year <- NUHDSS_Resi_Data_2002_2015 %>%  group_by(Calender_Year) %>% 
@@ -582,11 +540,11 @@ rates_overall_long <- pivot_longer(rates_overall, cols = c("BirthRate", "DeathRa
 
 gt(rates_overall_long) %>% fmt_number(decimals = 1)
 
-#======================================== Analysis related to death ================================================#
+#---------------------------------------Analysis related to death-----------------------------------------------------#
 
 deaths_data <- NUHDSS_Resi_Data_2002_2015 %>%  filter(residency_event == 'Death')
 
-#========================= proportion of deaths per year per age group, #not death rates ===========================
+#-------------------------proportion of deaths per year per age group, #not death rates-------------------------------#
 
 deaths_per_year_per_agegroup <- deaths_data %>% distinct(ID, Calender_Year, .keep_all = TRUE) %>%
   select(c("age_group","ID","Calender_Year"))
@@ -673,8 +631,7 @@ tab_deaths_age <- deaths %>%  tbl_summary(
 
 tab_deaths_age %>% as_gt()
 
-
-#========================================= Causes of death in general ==============================================
+#--------------------------------------Causes of death in general-----------------------------------------------------#
 
 
 deaths_causes <- deaths_data %>% distinct(ID, Calender_Year, .keep_all = TRUE) %>%
@@ -687,9 +644,7 @@ tab_NUHDSS_causes <- deaths_causes %>%  select(-c("ID", "Calender_Year") ) %>%  
 tab_NUHDSS_causes %>% as_gt() #-> tab_3
 
 
-#write.csv(tab_3, "D:\\APHRC\\APHRC-projects\\NUHDSS\\Residence_data\\tab_3.csv")
-
-#==================================== inmigrants analysis ============================================================
+#-------------------------------------------inmigrants analysis-------------------------------------------------------#
 
 
 # Filter data for inmigration events
@@ -731,7 +686,7 @@ tab_NUHDSS_individual <- Inmigration_reasons %>%  select(-c("ID") ) %>%
 tab_NUHDSS_individual %>% as_gt() #-> tab_2
 
 
-#=========================================== Profiling Oumigrants ========================================================#
+#----------------------------------------Profiling Oumigrants----------------------------------------------------------#
 
 #Demographic characteristics of outmigrants
 # Filter data for outmogration events
@@ -792,7 +747,7 @@ socioeconomic_status <- outmigration_data %>%
   ) %>%  summarise(OutmigrantsCount = n_distinct(ID),  .groups = "drop") %>% as.data.frame()%>%
   gt()
 
-#=====================================Population growth rate ========================================================
+#-------------------------------------------Population growth rate----------------------------------------------------#
 
 Enumeration_start <- subset(NUHDSS_Resi_Data_2002_2015, 
 round_in_which_event_occurred == 0 & residency_event == "Enumeration") %>% group_by(Calender_Year) %>%
@@ -828,7 +783,7 @@ ggplot(population_growth, aes(x = factor(Calender_Year), y = Growth_rate)) +
        y = "Population Growth Rate per 1000") +   theme_bw()
 
 
-#========================= Profiling individuals by residency events using a rectangular plot =======================
+#--------------------------Profiling individuals by residency events using a rectangular plot--------------------------#
 
 Enumeration_data <- NUHDSS_Resi_Data_2002_2015 %>%  filter(residency_event == 'Enumeration')
 
@@ -867,7 +822,7 @@ Enumeration_data <- NUHDSS_Resi_Data_2002_2015 %>%  filter(residency_event == 'E
               aes(x=residency_event_date, y=ID, color="Outmigrated"),  size=0.5)+
    scale_x_date(date_breaks = "8 months", date_labels = "%b-%Y")
  
- #================================================ ENTRY AND Exit ========================================================
+ #------------------------------------------------entry and exit------------------------------------------------------#
  
  total_ids_per_year_ent_exit <- NUHDSS_Resi_Data_2002_2015 %>%  group_by(Calender_Year, gender_of_NUHDSS_individual) %>% 
    summarise(TotalUniqueIDs = n_distinct(ID), .groups = "drop")
@@ -914,7 +869,7 @@ Enumeration_data <- NUHDSS_Resi_Data_2002_2015 %>%  filter(residency_event == 'E
    fmt_number(columns = c(starts_with("Female")), decimals = 1);  gt_combined
  
  
- #=========================================== Age groups =====
+ #ge groups 
  
  
  total_ids_per_year_age_cat <- NUHDSS_Resi_Data_2002_2015 %>%  group_by(Calender_Year, age_cat) %>% 
@@ -981,11 +936,7 @@ left_join( total_ids_per_year_age_cat, by = c("Calender_Year", "age_cat"))
    fmt_number(columns = c(starts_with("36-50")), decimals = 2)%>%
    fmt_number(columns = c(starts_with("51+")), decimals = 2);  gt_combined
  
- 
- 
- 
- 
- #========================================= Entry and Exit per slum area ==================================================
+#------------------------------------Entry and Exit per slum area------------------------------------------------------#
  
  # Calculate total population per slum area and year
  
@@ -1023,7 +974,7 @@ left_join( total_ids_per_year_age_cat, by = c("Calender_Year", "age_cat"))
     fmt_number(columns = c(starts_with("Korogocho")), decimals = 1) %>%
     fmt_number(columns = c(starts_with("Viwandani")), decimals = 1);  gt_combined
   
-  #======overal
+  #overal
   
   total_population_per_ov <- NUHDSS_Resi_Data_2002_2015 %>% group_by(Calender_Year) %>%
     summarise(TotalUniqueIDsOv = n_distinct(ID), .groups = "drop")
@@ -1039,7 +990,7 @@ left_join( total_ids_per_year_age_cat, by = c("Calender_Year", "age_cat"))
   
   gt(rates_ov) %>% fmt_number( decimals = 1)
   
-#=========================================== Inmigration and Outmigration ================================================
+#------------------------------------------In migration and Outmigration-----------------------------------------------#
   
 total_ids_per_year_in_out <- NUHDSS_Resi_Data_2002_2015 %>%  group_by(Calender_Year,gender_of_NUHDSS_individual ) %>% 
     summarise(TotalUniqueIDs = n_distinct(ID), .groups = "drop")
@@ -1128,7 +1079,7 @@ gt_combined <- gt(combined_rates) %>%
   fmt_number(columns = c(starts_with("Viwandani")), decimals = 2);gt_combined
 
 
-#=======overall
+#overall
 
 
 total_population <- NUHDSS_Resi_Data_2002_2015 %>% group_by(Calender_Year) %>%
@@ -1156,7 +1107,8 @@ rates_overall <- Inmigration_Outmigration_counts %>%
          Net_migrationRate = (Net_migration / TotalUniqueIDs) * 1000)
 
 gt(rates_overall) %>% fmt_number( decimals = 1)
-#================================================ Birth AND Death ========================================================
+
+#-------------------------------------------Birth AND Death-----------------------------------------------------------#
 
 total_ids_per_year_birth_death <- NUHDSS_Resi_Data_2002_2015 %>%  group_by(Calender_Year, gender_of_NUHDSS_individual) %>% 
   summarise(TotalUniqueIDs = n_distinct(ID), .groups = "drop")

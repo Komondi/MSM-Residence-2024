@@ -2,12 +2,6 @@
 
 rm(list = ls())
 
-#gc()
-
-#install.packages("xfun", type = "binary")
-
-#R --max-mem-size=32G
-
 #===================================================== Loading the libraries =======================================================
 
 libs <- c("haven", "mice", "dplyr", "tidyverse", "finalfit", "writexl", "lme4", "foreign", "readxl", "broom", 
@@ -21,11 +15,12 @@ for(ilib in libs){
   }
   library(ilib, character.only = T)
 }
-#pacman::p_load(easystats, INLA) # forest plot
+
+
 
 #================================================== Residency Data, 2002 to 2018 ==================================================#
 
-NUHDSS_Resi_Data_2002_2015 <- readRDS("~/Evans/NUHDSS_Final_MSM.rds")
+NUHDSS_Resi_Data_2002_2015 <- readRDS("D:\\APHRC\\APHRC-projects\\MSM\\MSM-Residence-2024\\Data\\NUHDSS_Final_MSM.rds")
 
 
 #========================================= transition matrix ========================================================
@@ -79,7 +74,7 @@ msm_model_male <- msm(Event_1 ~ days, ID, data = Male_data , exacttimes = TRUE, 
 
 msm_model_male
 
-save(msm_model_male, file="~/Evans/msm_model_female.RData")
+save(msm_model_male, file="D:\\APHRC\\APHRC-projects\\MSM\\MSM-Residence-2024\\Data\\msm_model_female.RData")
 
 
 qmatrix.msm(msm_model_male)
@@ -137,8 +132,6 @@ ggplot(plotdat, aes(x = Time, y = Value, color = Transitions, group = Transition
   theme(axis.text.x = element_text(face = "bold", size = 10), axis.text.y = element_text(face = "bold", size = 10),
         axis.title.x = element_text(face = "bold"), axis.title.y = element_text(face = "bold"),
         legend.text = element_text(face = "bold"), legend.title = element_text(face = "bold"))
-
-
 
 
 #========================================the survival plots ===============================================
