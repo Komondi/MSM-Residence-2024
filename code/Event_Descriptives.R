@@ -1065,11 +1065,13 @@ Viwandani_data <- rates_slum %>%  filter(slum_area_in_NUHDSS == "Viwandani") %>%
   select(Calender_Year, InmigrationRate, OutmigrationRate, Net_migrationRate)
 
 # Rename columns for clarity
-colnames(Korogocho_data) <- c("Year", "Korogocho Inmigration Rate", "Korogocho Outmigration Rate", "Korogocho Net migration Rate")
-colnames(Viwandani_data) <- c("Year", "Viwandani Inmigration Rate", "Viwandani Outmigration Rate", "Viwandani Net migration Rate")
+colnames(Korogocho_data) <- c("Year", "Korogocho_Inmigration_Rate", "Korogocho_Outmigration_Rate", "Korogocho_Net_migration_Rate")
+colnames(Viwandani_data) <- c("Year", "Viwandani_Inmigration_Rate", "Viwandani_Outmigration_Rate", "Viwandani_Net_migration_Rate")
 
 # Combine male and female rates by year
 combined_rates <- merge(Korogocho_data, Viwandani_data, by = "Year", all = TRUE)
+
+
 
 # Create gt table
 gt_combined <- gt(combined_rates) %>%
@@ -1104,9 +1106,53 @@ Inmigration_Outmigration_counts$Net_migration <-
 rates_overall <- Inmigration_Outmigration_counts %>%
   mutate(InmigrationRate = (Inmigration / TotalUniqueIDs) * 1000, 
          OutmigrationRate = (Outmigration / TotalUniqueIDs) * 1000, 
-         Net_migrationRate = (Net_migration / TotalUniqueIDs) * 1000)
+         Overall_Net_migration_Rate = (Net_migration / TotalUniqueIDs) * 1000)
+
+rates_overall <- rates_overall %>% rename(Year = Calender_Year)
 
 gt(rates_overall) %>% fmt_number( decimals = 1)
+
+
+
+
+# Select data
+df_koch_viwa <- combined_rates %>%
+  select(Year, Korogocho_Net_migration_Rate, Viwandani_Net_migration_Rate)
+
+df_overall <- rates_overall %>% select(Year, Overall_Net_migration_Rate)
+
+
+Net_rates <- merge(df_koch_viwa, df_overall, by = "Year", all = TRUE)
+
+
+Net_rates <- Net_rates %>% rename(Korogocho = Korogocho_Net_migration_Rate,
+                                  Viwandani = Viwandani_Net_migration_Rate,
+                                  Overall = Overall_Net_migration_Rate)
+
+#--------------------------------------------ggplot showing the net migration-----#
+
+
+
+long_data_combined_rates <- Net_rates %>%
+  pivot_longer(
+    cols = -Year, # Select all columns except "Year"
+    names_to = "NetRate", # The new column that stores the names of the original columns
+    values_to = "Rate" # The new column that stores the values
+  )
+
+
+ggplot(long_data_combined_rates, aes(x = Year, y = Rate, color = NetRate, group = NetRate)) +
+  geom_line(linewidth = 1.2) +
+  labs(title = "",x = "", y = "Net migration rate per 1000 individuals") +
+  scale_y_continuous(limits = c(-180, 100), breaks = seq(-180, 100, by = 20)) +
+  theme_bw() + theme(
+    legend.title = element_blank(),
+    axis.title.x = element_text(size = 12, face = "bold"),
+    axis.title.y = element_text(size = 12, face = "bold"),
+    axis.text.x = element_text(size = 10, face = "bold"),,
+    axis.text.y = element_text(size = 10, face = "bold"),
+  )
+
 
 #-------------------------------------------Birth AND Death-----------------------------------------------------------#
 
