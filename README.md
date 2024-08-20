@@ -63,4 +63,4 @@ For more information or collaboration inquiries, please contact:
 
 - African Population and Health Research Center (APHRC)
 - Project Lead: Dr. Evans Omondi
-- Email: [eomondi@aphrc.org]
+- Email: eomondi@aphrc.org
