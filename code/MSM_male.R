@@ -62,6 +62,11 @@ round(prop.table(smatrix, margin=1)*100, 0)
 
 (Q.crude <- crudeinits.msm(Event_1 ~ days, ID, data = Male_data, qmatrix = Q))
 
+#-------------------------------------------Model without the covariates (simple bidirectional model)---------------------------#
+msm_model_male_simple <- msm(Event_1 ~ days, ID, data = Male_data , exacttimes = TRUE, gen.inits = T, qmatrix = Q.crude, 
+                        control = list(fnscale = 6e+05, trace = 0, REPORT = 1, maxit = 100000), opt.method = "optim")
+
+
 
 print("====================================== Final male model running ========================================================")
 
@@ -76,12 +81,48 @@ msm_model_male
 
 save(msm_model_male, file="D:\\APHRC\\APHRC-projects\\MSM\\MSM-Residence-2024\\Data\\msm_model_female.RData")
 
+#--------------------------------------------------------goodness of fit----------------------------------------------------------#
+
+logLik(msm_model_male)
+
+lrtest(msm_model_male, msm_model_male_simple)
+
+#----------------------------------------cross-validation and prediction accuracy------------------------------------------------#
+
+set.seed(123)
+unique_ids_m <- unique(Male_data$ID)
+train_ids_m <- sample(unique_ids_m, size = 0.7*length(unique_ids_m))
+train_data_m <- Male_data %>% filter(ID %in% train_ids_m)
+test_data_m <- Male_data %>% filter(!ID %in% train_ids_m)
+
+# Fit the model on the training data
+msm_model_train_m <- msm(Event_1 ~ days, ID, data = train_data_m, exacttimes = TRUE, gen.inits = TRUE,
+                       covariates = ~ slum_area_in_NUHDSS + ethnicity_of_NUHDSS_individual +
+                         age_in_completed_years + type_of_area_in_Kenya_in_which_individual_was_born, 
+                       qmatrix = Q.crude, 
+                       control = list(fnscale = 6e+05, trace = 0, REPORT = 1, maxit = 100000), 
+                       opt.method = "optim")
+
+# Predict on the test data
+predicted_probabilities_m <- predict(msm_model_train_m, test_data_m)
+
+# Assess the prediction accuracy
+accuracy_m <- sum(predicted_probabilities_m == test_data_m$Event_1) / nrow(test_data_m)
+print(paste("Prediction Accuracy:", accuracy_m))
+
+#--------------------------------Extract transition rates and their confidence intervals----------------------------------------#
+trans_rates_m <- qmatrix.msm(msm_model_male)
+ci_trans_rates_m <- confint(msm_model_male)
+print(ci_trans_rates_m)
+
+#other rates
 
 qmatrix.msm(msm_model_male)
 pmatrix.msm(msm_model_male, t=2)
 sojourn.msm(msm_model_male)
 msm_model_male$paramdata$npars ## get number of parameters
 AIC(msm_model_male) ## AIC
+BIC(msm_model_male) ## BIC
 
 
 prev = prevalence.msm( x = msm_model_male, covariates = 'mean', ci = 'normal' )

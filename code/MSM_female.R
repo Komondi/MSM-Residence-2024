@@ -1,6 +1,6 @@
 #============================================ clear memory and check r memory =======================================================
 
-rm(list = ls())
+#rm(list = ls())
 
 #gc()
 
@@ -13,7 +13,7 @@ rm(list = ls())
 libs <- c("haven", "mice", "dplyr", "tidyverse", "finalfit", "writexl", "lme4", "foreign", "readxl", "broom", 
           "gtsummary", "gt", "sjlabelled", "data.table", "DiagrammeRsvg", "DiagrammeR", "gridExtra", "grid", 
           "tidymodels", "msm", "flexsurv", "minqa", "survival", "mstate", "lattice", "latticeExtra", 
-          "RColorBrewer", "diagram", "openxlsx", "janitor", "Hmisc", "magrittr", "rstan")
+          "RColorBrewer", "diagram", "openxlsx", "janitor", "Hmisc", "magrittr", "rstan", "lmtest", "caret")
 
 for(ilib in libs){
   if(!(ilib %in% installed.packages())){
@@ -67,6 +67,63 @@ round(prop.table(smatrix, margin=1)*100, 0)
 
 (Q.crude <- crudeinits.msm(Event_1 ~ days, ID, data = Female_data, qmatrix = Q))
 
+#-------------------------------------------Model without the covariates (simple bidirectional model)---------------------------#
+msm_model_female_simple <- msm(Event_1 ~ days, ID, data = Female_data , exacttimes = TRUE, gen.inits = T, qmatrix = Q.crude, 
+                           control = list(fnscale = 6e+05, trace = 0, REPORT = 1, maxit = 100000), opt.method = "optim")
+
+
+set.seed(123)
+
+#-----------------------------------------cross-validation-------------------------------------------------------------#
+
+unique_ids <- unique(Female_data$ID)
+k <- 5 # Number of folds
+
+# Create folds based on unique IDs
+folds <- cut(seq(1, length(unique_ids)), breaks = k, labels = FALSE)
+cv_results_F <- list()
+
+# Perform K-fold cross-validation
+for(i in 1:k) {
+  test_ids_F <- unique_ids[folds == i]
+  train_ids_F <- setdiff(unique_ids, test_ids_F)
+  
+  # Subset training and test data
+  train_data_F <- Female_data[Female_data$ID %in% train_ids_F, ]
+  test_data_F <- Female_data[Female_data$ID %in% test_ids_F, ]
+  
+  # Fit the MSM model to the training data
+  msm_model_F <- msm(Event_1 ~ days, subject = ID, data = train_data_F, exacttimes = TRUE, gen.inits = T,
+                     covariates = ~ slum_area_in_NUHDSS  + ethnicity_of_NUHDSS_individual + 
+                       age_in_completed_years + type_of_area_in_Kenya_in_which_individual_was_born, qmatrix = Q.crude, 
+                     control = list(fnscale = 6e+05, trace = 0, REPORT = 1, maxit = 100000), opt.method = "optim")
+  
+  # Evaluate the model on the test data
+  predicted_probs <- pmatrix.msm(msm_model_F, t = 1, covariates = test_data_F)
+  
+  # Store log-likelihood as a performance metric
+  cv_results_F[[i]] <- logLik(msm_model_F)
+}
+
+# Calculate the average log-likelihood across all folds
+mean_log_likelihood_F <- mean(unlist(cv_results_F))
+print(mean_log_likelihood_F)
+
+
+#----------------------------------------Assess Out-of-Sample Prediction Accuracy---------------------------------------#
+
+
+# Fit the final full model data
+final_msm_model_F <- msm(Event_1 ~ days, ID, data = Female_data , exacttimes = TRUE, gen.inits = T,
+                         covariates = ~ slum_area_in_NUHDSS  + ethnicity_of_NUHDSS_individual + 
+                           age_in_completed_years + type_of_area_in_Kenya_in_which_individual_was_born, qmatrix = Q.crude, 
+                         control = list(fnscale = 6e+05, trace = 0, REPORT = 1, maxit = 100000), opt.method = "optim")
+
+# Predict transition probabilities for new/unseen data
+predicted_probs_test_F <- pmatrix.msm(final_msm_model_F, t = 1, covariates = test_data_F)
+
+# Compare predicted probabilities with actual observed transitions
+
 
 print("====================================== Final female model running ========================================================")
 
@@ -81,6 +138,40 @@ msm_model_female
 
 save(msm_model_female, file="D:\\APHRC\\APHRC-projects\\MSM\\MSM-Residence-2024\\Data\\msm_model_female.RData")
 
+#--------------------------------------------------------goodness of fit----------------------------------------------------------#
+
+logLik(msm_model_female)
+
+lrtest(msm_model_female_simple, msm_model_female)
+
+#----------------------------------------cross-validation and prediction accuracy------------------------------------------------#
+
+set.seed(123)
+unique_ids <- unique(Female_data$ID)
+train_ids <- sample(unique_ids, size = 0.7 * length(unique_ids))
+train_data_f <- Female_data %>% filter(ID %in% train_ids)
+test_data_f <- Female_data %>% filter(!ID %in% train_ids)
+
+# Fit the model on the training data
+msm_model_train_f <- msm(Event_1 ~ days, ID, data = train_data_f, exacttimes = TRUE, gen.inits = TRUE,
+                         covariates = ~ slum_area_in_NUHDSS + ethnicity_of_NUHDSS_individual +
+                           age_in_completed_years + type_of_area_in_Kenya_in_which_individual_was_born, 
+                         qmatrix = Q.crude, control = list(fnscale = 6e+05, trace = 0, REPORT = 1, maxit = 100000), 
+                         opt.method = "optim")
+
+# Predict on the test data
+predicted_probabilities_f <- predict(msm_model_train_f, test_data_f)
+
+# Assess the prediction accuracy
+accuracy_f <- sum(predicted_probabilities_f == test_data_f$Event_1) / nrow(test_data_f)
+print(paste("Prediction Accuracy:", accuracy_f))
+
+#--------------------------------Extract transition rates and their confidence intervals----------------------------------------#
+trans_rates_f <- qmatrix.msm(msm_model_female)
+ci_trans_rates_f <- confint(msm_model_female)
+print(ci_trans_rates_f)
+
+#other rates
 
 qmatrix.msm(msm_model_female)
 pmatrix.msm(msm_model_female, t=2)

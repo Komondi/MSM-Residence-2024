@@ -455,11 +455,20 @@ rates_slum_gender <- birth_death_counts_slum_gender %>%
 
 birth_trend_line_plot <- ggplot(rates_slum_gender, aes(x = factor(Calender_Year), y = BirthRate, 
   color = slum_area_in_NUHDSS, group = slum_area_in_NUHDSS)) +
-  geom_line(linewidth = 1) +  geom_point(size = 1) +  labs(title = "Birth Rates Trend Lines in Two Slum Areas",
-       x = "Calendar Year", y = "Birth rates per 1000 individuals") +
-  theme_bw() +  scale_color_discrete(name = "Slum Area") +
+  geom_line(linewidth = 1.2) +  geom_point(size = 1.2) +  labs(title = "",
+       x = "", y = "Birth rates per 1000 individuals") +
+  theme_bw() +  theme(
+    legend.title = element_blank(),
+    axis.title.x = element_text(size = 12, face = "bold"),
+    axis.title.y = element_text(size = 12, face = "bold"),
+    axis.text.x = element_text(size = 10, face = "bold"),,
+    axis.text.y = element_text(size = 10, face = "bold"),
+  )+
+  scale_color_discrete(name = "Slum Area") +
   facet_wrap(~gender_of_NUHDSS_individual, scales = "free_y", ncol = 1) +
-  scale_x_discrete(breaks = unique(rates_slum_gender$Calender_Year)); birth_trend_line_plot
+  scale_x_discrete(breaks = unique(rates_slum_gender$Calender_Year)) +
+  scale_y_continuous(limits = c(0, 40), breaks = seq(0, 40, by = 5)); birth_trend_line_plot
+
 
 
 
@@ -468,11 +477,19 @@ birth_trend_line_plot <- ggplot(rates_slum_gender, aes(x = factor(Calender_Year)
 
 death_trend_line_plot <- ggplot(rates_slum_gender, aes(x = factor(Calender_Year), y = DeathRate, 
   color = slum_area_in_NUHDSS, group = slum_area_in_NUHDSS)) +
-  geom_line(linewidth = 1.0) +  geom_point(size = 1.0) +   labs(title = "Death Rates Trend Lines in Two Slum Areas",
-       x = "Calendar Year",   y = "Death rate per 1000 individuals") +
-  theme_bw() +   scale_color_discrete(name = "Slum Area") +
+  geom_line(linewidth = 1.2) +  geom_point(size = 1.2) +   labs(title = "",
+       x = "",   y = "Death rate per 1000 individuals") +
+  theme_bw() +  theme(
+    legend.title = element_blank(),
+    axis.title.x = element_text(size = 12, face = "bold"),
+    axis.title.y = element_text(size = 12, face = "bold"),
+    axis.text.x = element_text(size = 10, face = "bold"),,
+    axis.text.y = element_text(size = 10, face = "bold"),
+  )+
+  scale_color_discrete(name = "Slum Area") +
   facet_wrap(~gender_of_NUHDSS_individual, scales = "free_y", ncol = 1) +
-  scale_x_discrete(breaks = unique(rates_slum_gender$Calender_Year)); death_trend_line_plot
+  scale_x_discrete(breaks = unique(rates_slum_gender$Calender_Year)) +
+  scale_y_continuous(limits = c(0, 14), breaks = seq(0, 14, by = 2)); death_trend_line_plot
 
 
 #------------------------------------Birth and death rates per gender-------------------------------------------------#
@@ -643,6 +660,174 @@ tab_NUHDSS_causes <- deaths_causes %>%  select(-c("ID", "Calender_Year") ) %>%  
 
 tab_NUHDSS_causes %>% as_gt() #-> tab_3
 
+#------------------------------------------------entry and exit------------------------------------------------------#
+
+total_ids_per_year_ent_exit <- NUHDSS_Resi_Data_2002_2015 %>%  group_by(Calender_Year, gender_of_NUHDSS_individual) %>% 
+  summarise(TotalUniqueIDs = n_distinct(ID), .groups = "drop")
+
+
+exit_entry_data <- NUHDSS_Resi_Data_2002_2015 %>%   filter(residency_event %in% c("Exit", "Entry"))
+
+
+# Calculate the number of exit and entry per year and gender
+
+Exit_Entry_counts_gender <- exit_entry_data %>% group_by(Calender_Year, gender_of_NUHDSS_individual, residency_event) %>%
+  summarise(Count = n_distinct(ID), .groups = "drop") %>% pivot_wider(names_from = residency_event, values_from = Count) %>%
+  left_join( total_ids_per_year_ent_exit, by = c("Calender_Year", "gender_of_NUHDSS_individual"))
+
+
+# Calculate exit and entry rates per year and gender
+
+rates_gender <- Exit_Entry_counts_gender %>%
+  mutate(ExitRate = (Exit / TotalUniqueIDs) * 1000, EntryRate = (Entry / TotalUniqueIDs) * 1000)
+
+
+# Separate data for male and female
+
+male_data <- rates_gender %>%  filter(gender_of_NUHDSS_individual == "Male") %>%
+  select(Calender_Year, ExitRate, EntryRate)
+
+female_data <- rates_gender %>%   filter(gender_of_NUHDSS_individual == "Female") %>%
+  select(Calender_Year, ExitRate, EntryRate)
+
+# Rename columns for clarity
+
+colnames(male_data) <- c("Year", "Male Exit Rate", "Male Entry Rate")
+colnames(female_data) <- c("Year", "Female Exit Rate", "Female Entry Rate")
+
+# Combine male and female rates by year
+
+combined_rates_gender <- merge(male_data, female_data, by = "Year", all = TRUE)
+
+
+# Create gt table
+gt_combined <- gt(combined_rates_gender) %>% tab_spanner(label = "Male", columns = c(starts_with("Male"))) %>%
+  tab_spanner(label = "Female", columns = c(starts_with("Female"))) %>% tab_header(title = "Gender") %>% 
+  fmt_number(columns = c(starts_with("Male")), decimals = 1) %>%
+  fmt_number(columns = c(starts_with("Female")), decimals = 1);  gt_combined
+
+
+#ge groups 
+
+
+total_ids_per_year_age_cat <- NUHDSS_Resi_Data_2002_2015 %>%  group_by(Calender_Year, age_cat) %>% 
+  summarise(TotalUniqueIDs = n_distinct(ID), .groups = "drop")
+
+
+exit_entry_data_age_cat <- NUHDSS_Resi_Data_2002_2015 %>%   filter(residency_event %in% c("Exit", "Entry"))
+
+
+# Calculate the number of exit and entry per year and gender
+
+Exit_Entry_counts_age_cat <- exit_entry_data_age_cat %>% group_by(Calender_Year, age_cat, residency_event) %>%
+  summarise(Count = n_distinct(ID), .groups = "drop") %>% pivot_wider(names_from = residency_event, values_from = Count) %>%
+  left_join( total_ids_per_year_age_cat, by = c("Calender_Year", "age_cat"))
+
+
+# Calculate exit and entry rates per year and gender
+
+rates_age_cat <- Exit_Entry_counts_age_cat %>%
+  mutate(ExitRate = (Exit / TotalUniqueIDs) * 1000, EntryRate = (Entry / TotalUniqueIDs) * 1000)
+
+
+# Separate data for  each age group
+
+under_14_data <- rates_age_cat %>%  filter(age_cat == "0-14") %>% select(Calender_Year, ExitRate, EntryRate)
+
+data_15_19 <- rates_age_cat %>%  filter(age_cat == "15-19") %>% select(Calender_Year, ExitRate, EntryRate)
+
+data_20_35 <- rates_age_cat %>%  filter(age_cat == "20-35") %>% select(Calender_Year, ExitRate, EntryRate)
+
+data_36_50 <- rates_age_cat %>%  filter(age_cat == "36-50") %>% select(Calender_Year, ExitRate, EntryRate)
+
+data_50_over <- rates_age_cat %>%  filter(age_cat == "51+") %>% select(Calender_Year, ExitRate, EntryRate)
+
+
+colnames(under_14_data) <- c("Year", "Under 14 Exit Rate", "Under 14 Entry Rate")
+
+colnames(data_15_19) <- c("Year", "A 15-19 Exit Rate", "A 15-19 Entry Rate")
+
+colnames(data_20_35) <- c("Year", "A 20-35 Exit Rate", "A 20-35 Entry Rate")
+
+colnames(data_36_50) <- c("Year", "A 36-50 Exit Rate", "A 36-50 Entry Rate")
+
+colnames(data_50_over) <- c("Year", "Over 50 Exit Rate", "Over 50 Entry Rate")
+
+# List of datasets to merge
+data_list <- list(under_14_data, data_15_19, data_20_35, data_36_50, data_50_over)
+
+# Specify the common column for merging
+by_column <- "Year"
+
+# Merge datasets using Reduce function
+combined_rates_age_cat <- Reduce(function(x, y) merge(x, y, by = by_column, all = TRUE), data_list)
+
+# Create gt table
+gt_combined <- gt(combined_rates_age_cat) %>% tab_spanner(label = "0-14", columns = c(starts_with("0-14"))) %>%
+  tab_spanner(label = "15-19", columns = c(starts_with("15-19"))) %>% 
+  tab_spanner(label = "20-35", columns = c(starts_with("20-35"))) %>% 
+  tab_spanner(label = "36-50", columns = c(starts_with("36-50"))) %>% 
+  tab_spanner(label = "51+", columns = c(starts_with("51+"))) %>% tab_header(title = "Age") %>% 
+  fmt_number(columns = c(starts_with("0-14")), decimals = 2) %>%
+  fmt_number(columns = c(starts_with("15-19")), decimals = 2)%>%
+  fmt_number(columns = c(starts_with("20-35")), decimals = 2)%>%
+  fmt_number(columns = c(starts_with("36-50")), decimals = 2)%>%
+  fmt_number(columns = c(starts_with("51+")), decimals = 2);  gt_combined
+
+#------------------------------------Entry and Exit per slum area------------------------------------------------------#
+
+# Calculate total population per slum area and year
+
+total_population_per_slum <- NUHDSS_Resi_Data_2002_2015 %>% group_by(Calender_Year, slum_area_in_NUHDSS) %>%
+  summarise(TotalUniqueIDsPerSlum = n_distinct(ID), .groups = "drop")
+
+# Calculate the number of exit and entry per year and slum
+Exit_Entry_counts_slum <- exit_entry_data %>% group_by(Calender_Year, slum_area_in_NUHDSS, residency_event) %>%
+  summarise(Count = n_distinct(ID), .groups = "drop")%>% pivot_wider(names_from = residency_event, values_from = Count) %>%
+  left_join(total_population_per_slum, by = c("Calender_Year", "slum_area_in_NUHDSS")) 
+
+
+# Calculate exit and entry rates per year and gender
+rates_slum <- Exit_Entry_counts_slum %>%
+  mutate(ExitRate = (Exit / TotalUniqueIDsPerSlum) * 1000, EntryRate = (Entry / TotalUniqueIDsPerSlum) * 1000)
+
+# Separate data for V and k
+Korogocho_data <- rates_slum %>%  filter(slum_area_in_NUHDSS == "Korogocho") %>%
+  select(Calender_Year, ExitRate, EntryRate)
+
+Viwandani_data <- rates_slum %>%  filter(slum_area_in_NUHDSS == "Viwandani") %>%
+  select(Calender_Year, ExitRate, EntryRate)
+
+# Rename columns for clarity
+colnames(Korogocho_data) <- c("Year", "Korogocho Exit Rate", "Korogocho Entry Rate")
+colnames(Viwandani_data) <- c("Year", "Viwandani Exit Rate", "Viwandani Entry Rate")
+
+combined_rates <- merge(Korogocho_data, Viwandani_data, by = "Year", all = TRUE)
+
+
+gt_combined <- gt(combined_rates) %>%
+  tab_spanner(label = "Korogocho", columns = c(starts_with("Korogocho"))) %>%
+  tab_spanner(label = "Viwandani", columns = c(starts_with("Viwandani"))) %>%
+  tab_header(title = "Slum Area") %>%
+  fmt_number(columns = c(starts_with("Korogocho")), decimals = 1) %>%
+  fmt_number(columns = c(starts_with("Viwandani")), decimals = 1);  gt_combined
+
+#overal
+
+total_population_per_ov <- NUHDSS_Resi_Data_2002_2015 %>% group_by(Calender_Year) %>%
+  summarise(TotalUniqueIDsOv = n_distinct(ID), .groups = "drop")
+
+Exit_Entry_counts_ov <- exit_entry_data %>% group_by(Calender_Year,  residency_event) %>%
+  summarise(Count = n_distinct(ID), .groups = "drop")%>% pivot_wider(names_from = residency_event, 
+                                                                     values_from = Count) %>%left_join(total_population_per_ov, by = c("Calender_Year"))
+
+
+# Calculate exit and entry rates per year 
+rates_ov <- Exit_Entry_counts_ov %>%
+  mutate(ExitRate = (Exit / TotalUniqueIDsOv) * 1000, EntryRate = (Entry / TotalUniqueIDsOv) * 1000)
+
+gt(rates_ov) %>% fmt_number( decimals = 1)
+
 
 #-------------------------------------------inmigrants analysis-------------------------------------------------------#
 
@@ -808,8 +993,7 @@ Enumeration_data <- NUHDSS_Resi_Data_2002_2015 %>%  filter(residency_event == 'E
  Birth_data <- NUHDSS_Resi_Data_2002_2015 %>%  filter(residency_event == 'Birth')
  
  
- ggplot(data=Birth_data) +
-   geom_point(aes(x = residency_event_date, y = ID))
+ ggplot(data=Birth_data) + geom_point(aes(x = residency_event_date, y = ID))
 
  
  
@@ -822,173 +1006,7 @@ Enumeration_data <- NUHDSS_Resi_Data_2002_2015 %>%  filter(residency_event == 'E
               aes(x=residency_event_date, y=ID, color="Outmigrated"),  size=0.5)+
    scale_x_date(date_breaks = "8 months", date_labels = "%b-%Y")
  
- #------------------------------------------------entry and exit------------------------------------------------------#
  
- total_ids_per_year_ent_exit <- NUHDSS_Resi_Data_2002_2015 %>%  group_by(Calender_Year, gender_of_NUHDSS_individual) %>% 
-   summarise(TotalUniqueIDs = n_distinct(ID), .groups = "drop")
- 
- 
- exit_entry_data <- NUHDSS_Resi_Data_2002_2015 %>%   filter(residency_event %in% c("Exit", "Entry"))
- 
- 
- # Calculate the number of exit and entry per year and gender
- 
- Exit_Entry_counts_gender <- exit_entry_data %>% group_by(Calender_Year, gender_of_NUHDSS_individual, residency_event) %>%
-   summarise(Count = n_distinct(ID), .groups = "drop") %>% pivot_wider(names_from = residency_event, values_from = Count) %>%
-   left_join( total_ids_per_year_ent_exit, by = c("Calender_Year", "gender_of_NUHDSS_individual"))
- 
- 
- # Calculate exit and entry rates per year and gender
- 
- rates_gender <- Exit_Entry_counts_gender %>%
-   mutate(ExitRate = (Exit / TotalUniqueIDs) * 1000, EntryRate = (Entry / TotalUniqueIDs) * 1000)
- 
- 
- # Separate data for male and female
- 
- male_data <- rates_gender %>%  filter(gender_of_NUHDSS_individual == "Male") %>%
-   select(Calender_Year, ExitRate, EntryRate)
- 
- female_data <- rates_gender %>%   filter(gender_of_NUHDSS_individual == "Female") %>%
-   select(Calender_Year, ExitRate, EntryRate)
- 
- # Rename columns for clarity
- 
- colnames(male_data) <- c("Year", "Male Exit Rate", "Male Entry Rate")
- colnames(female_data) <- c("Year", "Female Exit Rate", "Female Entry Rate")
- 
- # Combine male and female rates by year
- 
- combined_rates_gender <- merge(male_data, female_data, by = "Year", all = TRUE)
- 
- 
- # Create gt table
- gt_combined <- gt(combined_rates_gender) %>% tab_spanner(label = "Male", columns = c(starts_with("Male"))) %>%
-   tab_spanner(label = "Female", columns = c(starts_with("Female"))) %>% tab_header(title = "Gender") %>% 
-   fmt_number(columns = c(starts_with("Male")), decimals = 1) %>%
-   fmt_number(columns = c(starts_with("Female")), decimals = 1);  gt_combined
- 
- 
- #ge groups 
- 
- 
- total_ids_per_year_age_cat <- NUHDSS_Resi_Data_2002_2015 %>%  group_by(Calender_Year, age_cat) %>% 
-   summarise(TotalUniqueIDs = n_distinct(ID), .groups = "drop")
- 
- 
- exit_entry_data_age_cat <- NUHDSS_Resi_Data_2002_2015 %>%   filter(residency_event %in% c("Exit", "Entry"))
- 
- 
- # Calculate the number of exit and entry per year and gender
- 
-Exit_Entry_counts_age_cat <- exit_entry_data_age_cat %>% group_by(Calender_Year, age_cat, residency_event) %>%
-summarise(Count = n_distinct(ID), .groups = "drop") %>% pivot_wider(names_from = residency_event, values_from = Count) %>%
-left_join( total_ids_per_year_age_cat, by = c("Calender_Year", "age_cat"))
- 
- 
- # Calculate exit and entry rates per year and gender
- 
- rates_age_cat <- Exit_Entry_counts_age_cat %>%
-   mutate(ExitRate = (Exit / TotalUniqueIDs) * 1000, EntryRate = (Entry / TotalUniqueIDs) * 1000)
- 
- 
- # Separate data for  each age group
- 
- under_14_data <- rates_age_cat %>%  filter(age_cat == "0-14") %>% select(Calender_Year, ExitRate, EntryRate)
- 
- data_15_19 <- rates_age_cat %>%  filter(age_cat == "15-19") %>% select(Calender_Year, ExitRate, EntryRate)
- 
- data_20_35 <- rates_age_cat %>%  filter(age_cat == "20-35") %>% select(Calender_Year, ExitRate, EntryRate)
- 
- data_36_50 <- rates_age_cat %>%  filter(age_cat == "36-50") %>% select(Calender_Year, ExitRate, EntryRate)
- 
- data_50_over <- rates_age_cat %>%  filter(age_cat == "51+") %>% select(Calender_Year, ExitRate, EntryRate)
- 
- 
- colnames(under_14_data) <- c("Year", "Under 14 Exit Rate", "Under 14 Entry Rate")
- 
- colnames(data_15_19) <- c("Year", "A 15-19 Exit Rate", "A 15-19 Entry Rate")
- 
- colnames(data_20_35) <- c("Year", "A 20-35 Exit Rate", "A 20-35 Entry Rate")
- 
- colnames(data_36_50) <- c("Year", "A 36-50 Exit Rate", "A 36-50 Entry Rate")
- 
- colnames(data_50_over) <- c("Year", "Over 50 Exit Rate", "Over 50 Entry Rate")
- 
- # List of datasets to merge
- data_list <- list(under_14_data, data_15_19, data_20_35, data_36_50, data_50_over)
- 
- # Specify the common column for merging
- by_column <- "Year"
- 
- # Merge datasets using Reduce function
- combined_rates_age_cat <- Reduce(function(x, y) merge(x, y, by = by_column, all = TRUE), data_list)
- 
-  # Create gt table
- gt_combined <- gt(combined_rates_age_cat) %>% tab_spanner(label = "0-14", columns = c(starts_with("0-14"))) %>%
-   tab_spanner(label = "15-19", columns = c(starts_with("15-19"))) %>% 
-   tab_spanner(label = "20-35", columns = c(starts_with("20-35"))) %>% 
-   tab_spanner(label = "36-50", columns = c(starts_with("36-50"))) %>% 
-   tab_spanner(label = "51+", columns = c(starts_with("51+"))) %>% tab_header(title = "Age") %>% 
-   fmt_number(columns = c(starts_with("0-14")), decimals = 2) %>%
-   fmt_number(columns = c(starts_with("15-19")), decimals = 2)%>%
-   fmt_number(columns = c(starts_with("20-35")), decimals = 2)%>%
-   fmt_number(columns = c(starts_with("36-50")), decimals = 2)%>%
-   fmt_number(columns = c(starts_with("51+")), decimals = 2);  gt_combined
- 
-#------------------------------------Entry and Exit per slum area------------------------------------------------------#
- 
- # Calculate total population per slum area and year
- 
- total_population_per_slum <- NUHDSS_Resi_Data_2002_2015 %>% group_by(Calender_Year, slum_area_in_NUHDSS) %>%
-   summarise(TotalUniqueIDsPerSlum = n_distinct(ID), .groups = "drop")
- 
-# Calculate the number of exit and entry per year and slum
- Exit_Entry_counts_slum <- exit_entry_data %>% group_by(Calender_Year, slum_area_in_NUHDSS, residency_event) %>%
-   summarise(Count = n_distinct(ID), .groups = "drop")%>% pivot_wider(names_from = residency_event, values_from = Count) %>%
-   left_join(total_population_per_slum, by = c("Calender_Year", "slum_area_in_NUHDSS")) 
- 
- 
- # Calculate exit and entry rates per year and gender
- rates_slum <- Exit_Entry_counts_slum %>%
-   mutate(ExitRate = (Exit / TotalUniqueIDsPerSlum) * 1000, EntryRate = (Entry / TotalUniqueIDsPerSlum) * 1000)
- 
- # Separate data for V and k
- Korogocho_data <- rates_slum %>%  filter(slum_area_in_NUHDSS == "Korogocho") %>%
-   select(Calender_Year, ExitRate, EntryRate)
- 
- Viwandani_data <- rates_slum %>%  filter(slum_area_in_NUHDSS == "Viwandani") %>%
-   select(Calender_Year, ExitRate, EntryRate)
- 
- # Rename columns for clarity
- colnames(Korogocho_data) <- c("Year", "Korogocho Exit Rate", "Korogocho Entry Rate")
- colnames(Viwandani_data) <- c("Year", "Viwandani Exit Rate", "Viwandani Entry Rate")
- 
-  combined_rates <- merge(Korogocho_data, Viwandani_data, by = "Year", all = TRUE)
-  
- 
-  gt_combined <- gt(combined_rates) %>%
-    tab_spanner(label = "Korogocho", columns = c(starts_with("Korogocho"))) %>%
-    tab_spanner(label = "Viwandani", columns = c(starts_with("Viwandani"))) %>%
-    tab_header(title = "Slum Area") %>%
-    fmt_number(columns = c(starts_with("Korogocho")), decimals = 1) %>%
-    fmt_number(columns = c(starts_with("Viwandani")), decimals = 1);  gt_combined
-  
-  #overal
-  
-  total_population_per_ov <- NUHDSS_Resi_Data_2002_2015 %>% group_by(Calender_Year) %>%
-    summarise(TotalUniqueIDsOv = n_distinct(ID), .groups = "drop")
-  
-  Exit_Entry_counts_ov <- exit_entry_data %>% group_by(Calender_Year,  residency_event) %>%
-    summarise(Count = n_distinct(ID), .groups = "drop")%>% pivot_wider(names_from = residency_event, 
-    values_from = Count) %>%left_join(total_population_per_ov, by = c("Calender_Year"))
-  
-  
-  # Calculate exit and entry rates per year 
-  rates_ov <- Exit_Entry_counts_ov %>%
-    mutate(ExitRate = (Exit / TotalUniqueIDsOv) * 1000, EntryRate = (Entry / TotalUniqueIDsOv) * 1000)
-  
-  gt(rates_ov) %>% fmt_number( decimals = 1)
   
 #------------------------------------------In migration and Outmigration-----------------------------------------------#
   
@@ -1020,8 +1038,8 @@ male_data <- rates_gender %>%  filter(gender_of_NUHDSS_individual == "Male") %>%
 female_data <- rates_gender %>%   filter(gender_of_NUHDSS_individual == "Female") %>%
   select(Calender_Year, InmigrationRate, OutmigrationRate, Net_migrationRate)
 
-colnames(male_data) <- c("Year", "Male Inmigration Rate", "Male Outmigration Rate", "Male Net migration Rate")
-colnames(female_data) <- c("Year", "Female Inmigration Rate", "Female Outmigration Rate", "Female Net migration Rate")
+colnames(male_data) <- c("Year", "Male_Inmigration_Rate", "Male_Outmigration_Rate", "Male_Net_migration_Rate")
+colnames(female_data) <- c("Year", "Female_Inmigration_Rate", "Female_Outmigration_Rate", "Female_Net_migration_Rate")
 
 # Combine male and female rates by year
 combined_rates_gender <- merge(male_data, female_data, by = "Year", all = TRUE)
@@ -1091,7 +1109,7 @@ Inmigration_Outmigration_data <- NUHDSS_Resi_Data_2002_2015 %>%
   filter(residency_event %in% c("Inmigration", "Outmigration"))
 
 
-# Calculate the number of exit and entry per year and slum
+# Calculate the number 
 
 Inmigration_Outmigration_counts <- Inmigration_Outmigration_data %>%
   group_by(Calender_Year,  residency_event) %>%  summarise(Count = n_distinct(ID), .groups = "drop")%>%   
@@ -1112,12 +1130,8 @@ rates_overall <- rates_overall %>% rename(Year = Calender_Year)
 
 gt(rates_overall) %>% fmt_number( decimals = 1)
 
-
-
-
 # Select data
-df_koch_viwa <- combined_rates %>%
-  select(Year, Korogocho_Net_migration_Rate, Viwandani_Net_migration_Rate)
+df_koch_viwa <- combined_rates %>% select(Year, Korogocho_Net_migration_Rate, Viwandani_Net_migration_Rate)
 
 df_overall <- rates_overall %>% select(Year, Overall_Net_migration_Rate)
 
@@ -1129,9 +1143,7 @@ Net_rates <- Net_rates %>% rename(Korogocho = Korogocho_Net_migration_Rate,
                                   Viwandani = Viwandani_Net_migration_Rate,
                                   Overall = Overall_Net_migration_Rate)
 
-#--------------------------------------------ggplot showing the net migration-----#
-
-
+#--------------------------------------------ggplot showing the net migration-----------------------------------------#
 
 long_data_combined_rates <- Net_rates %>%
   pivot_longer(
@@ -1145,8 +1157,7 @@ ggplot(long_data_combined_rates, aes(x = Year, y = Rate, color = NetRate, group 
   geom_line(linewidth = 1.2) +
   labs(title = "",x = "", y = "Net migration rate per 1000 individuals") +
   scale_y_continuous(limits = c(-180, 100), breaks = seq(-180, 100, by = 20)) +
-  theme_bw() + theme(
-    legend.title = element_blank(),
+  theme_bw() + theme(legend.title = element_blank(),
     axis.title.x = element_text(size = 12, face = "bold"),
     axis.title.y = element_text(size = 12, face = "bold"),
     axis.text.x = element_text(size = 10, face = "bold"),,
@@ -1154,7 +1165,33 @@ ggplot(long_data_combined_rates, aes(x = Year, y = Rate, color = NetRate, group 
   )
 
 
-#-------------------------------------------Birth AND Death-----------------------------------------------------------#
+#gender
+
+df_male_female <- combined_rates_gender %>% select(Year, Male_Net_migration_Rate, Female_Net_migration_Rate)
+
+df_gen_Net_rates <- merge(df_male_female, df_overall, by = "Year", all = TRUE)
+
+df_gen_Net_rates <- df_gen_Net_rates %>% rename(Male = Male_Net_migration_Rate,
+                      Female = Female_Net_migration_Rate, Overall = Overall_Net_migration_Rate)
+
+long_df_gen_Net_rates <- df_gen_Net_rates %>%
+  pivot_longer(cols = -Year, names_to = "NetRate", values_to = "Rate" 
+  )
+
+
+ggplot(long_df_gen_Net_rates, aes(x = Year, y = Rate, color = NetRate, group = NetRate)) +
+  geom_line(linewidth = 1.2) +
+  labs(title = "",x = "", y = "Net migration rate per 1000 individuals") +
+  scale_y_continuous(limits = c(-180, 100), breaks = seq(-180, 100, by = 20)) +
+  theme_bw() + theme(legend.title = element_blank(),
+    axis.title.x = element_text(size = 12, face = "bold"),
+    axis.title.y = element_text(size = 12, face = "bold"),
+    axis.text.x = element_text(size = 10, face = "bold"),,
+    axis.text.y = element_text(size = 10, face = "bold"),
+  )
+
+
+#-------------------------------------------Birth and death-----------------------------------------------------------#
 
 total_ids_per_year_birth_death <- NUHDSS_Resi_Data_2002_2015 %>%  group_by(Calender_Year, gender_of_NUHDSS_individual) %>% 
   summarise(TotalUniqueIDs = n_distinct(ID), .groups = "drop")
@@ -1170,7 +1207,7 @@ birth_death_counts_gender <- birth_death_data %>% group_by(Calender_Year, gender
   left_join( total_ids_per_year_birth_death, by = c("Calender_Year", "gender_of_NUHDSS_individual"))
 
 
-# Calculate exit and entry rates per year and gender
+# Calculate birth and death rates per year and gender
 
 b_and_d_rates_gender <- birth_death_counts_gender %>%
   mutate(BirthRate = (Birth / TotalUniqueIDs) * 1000, DeathRate = (Death / TotalUniqueIDs) * 1000)
@@ -1186,8 +1223,8 @@ female_data <- b_and_d_rates_gender %>%   filter(gender_of_NUHDSS_individual == 
 
 # Rename columns for clarity
 
-colnames(male_data) <- c("Year", "Male Birth Rate", "Male Death Rate")
-colnames(female_data) <- c("Year", "Female Birth Rate", "Female Death Rate")
+colnames(male_data) <- c("Year", "Male_Birth_Rate", "Male_Death_Rate")
+colnames(female_data) <- c("Year", "Female_Birth_Rate", "Female_Death_Rate")
 
 # Combine male and female rates by year
 
@@ -1200,3 +1237,70 @@ gt_combined <- gt(combined_rates_gender) %>% tab_spanner(label = "Male", columns
   fmt_number(columns = c(starts_with("Male")), decimals = 1) %>%
   fmt_number(columns = c(starts_with("Female")), decimals = 1);  gt_combined
 
+
+
+
+#---------------------------------exit and entry rates per slum per gender-------------------------------------------#
+
+#Number of individuals 
+
+total_ids <- NUHDSS_Resi_Data_2002_2015 %>%  group_by( gender_of_NUHDSS_individual,slum_area_in_NUHDSS, Calender_Year) %>%
+  summarise(TotalUniqueIDs = n_distinct(ID), .groups = "drop")
+
+
+
+df_data <- NUHDSS_Resi_Data_2002_2015 %>% filter(residency_event %in% c('Entry', 'Exit'))
+
+
+# Calculate the number 
+
+df_counts <- df_data %>% 
+  group_by(slum_area_in_NUHDSS, Calender_Year, gender_of_NUHDSS_individual, residency_event) %>%
+  summarise(Count = n_distinct(ID), .groups = "drop") %>%
+  pivot_wider(names_from = residency_event, values_from = Count) %>%
+  left_join(total_ids, by = c("slum_area_in_NUHDSS", "Calender_Year", "gender_of_NUHDSS_individual"))
+
+
+# Calculate  rates 
+df_entry_exit_rates <- df_counts %>%
+  mutate(EntryRate = (Entry/TotalUniqueIDs) * 1000,  ExitRate = (Exit/TotalUniqueIDs) * 1000)
+
+
+
+# Plot trend 
+
+ ggplot(df_entry_exit_rates, aes(x = factor(Calender_Year), y = EntryRate, 
+      color = slum_area_in_NUHDSS, group = slum_area_in_NUHDSS)) +
+  geom_line(linewidth = 1.2) +  geom_point(size = 1.2) +  
+  labs(title = "", x = "", y = "Entry rates per 1000 individuals") +
+  theme_bw() +  theme(
+    legend.title = element_blank(),
+    legend.text = element_text(size = 14),
+    axis.title.x = element_text(size = 12, face = "bold"),
+    axis.title.y = element_text(size = 12, face = "bold"),
+    axis.text.x = element_text(size = 10, face = "bold"),,
+    axis.text.y = element_text(size = 10, face = "bold"),
+  )+
+  scale_color_discrete(name = "Slum Area") +
+  facet_wrap(~gender_of_NUHDSS_individual, scales = "free_y", ncol = 1) +
+  scale_x_discrete(breaks = unique(rates_slum_gender$Calender_Year)) +
+  scale_y_continuous(limits = c(0, 400), breaks = seq(0, 400, by = 40))
+
+
+ 
+
+ggplot(df_entry_exit_rates, aes(x = factor(Calender_Year), y = ExitRate, 
+        color = slum_area_in_NUHDSS, group = slum_area_in_NUHDSS)) +
+  geom_line(linewidth = 1.2) +  geom_point(size = 1.2) +   
+  labs(title = "", x = "",   y = "Exit rate per 1000 individuals") +
+  theme_bw() +  theme(
+    legend.title = element_blank(),
+    axis.title.x = element_text(size = 12, face = "bold"),
+    axis.title.y = element_text(size = 12, face = "bold"),
+    axis.text.x = element_text(size = 10, face = "bold"),,
+    axis.text.y = element_text(size = 10, face = "bold"),
+  )+
+  scale_color_discrete(name = "Slum Area") +
+  facet_wrap(~gender_of_NUHDSS_individual, scales = "free_y", ncol = 1) +
+  scale_x_discrete(breaks = unique(rates_slum_gender$Calender_Year)) +
+  scale_y_continuous(limits = c(0, 400), breaks = seq(0, 400, by = 40))
