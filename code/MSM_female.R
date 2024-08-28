@@ -1,14 +1,4 @@
-#============================================ clear memory and check r memory =======================================================
-
-#rm(list = ls())
-
-#gc()
-
-#install.packages("xfun", type = "binary")
-
-#R --max-mem-size=32G
-
-#===================================================== Loading the libraries =======================================================
+#---------------------------------------------Loading the libraries----------------------------------------------------#
 
 libs <- c("haven", "mice", "dplyr", "tidyverse", "finalfit", "writexl", "lme4", "foreign", "readxl", "broom", 
           "gtsummary", "gt", "sjlabelled", "data.table", "DiagrammeRsvg", "DiagrammeR", "gridExtra", "grid", 
@@ -21,21 +11,21 @@ for(ilib in libs){
   }
   library(ilib, character.only = T)
 }
-#pacman::p_load(easystats, INLA) # forest plot
 
-#================================================== Residency Data, 2002 to 2018 ==================================================#
+
+#--------------------------------------Residency Data, 2002 to 2015----------------------------------------------------#
 
 NUHDSS_Resi_Data_2002_2015 <- readRDS("D:\\APHRC\\APHRC-projects\\MSM\\MSM-Residence-2024\\Data\\NUHDSS_Final_MSM.rds")
 
 
-#========================================= transition matrix ========================================================
+#--------------------------------------------transition matrix---------------------------------------------------------#
 
 trans_mat <- transMat(x = list( c(3, 5, 7), c(3, 5, 7), c(4), c(3,5,7),c(6),c(3,5,7), c()),
                       names = c("Enumeration","Birth","Exit","Entry","Outmigration","Inmigration","Death"))
 
 
 
-#======================================= Diagram for the transition matrix =========================================
+#----------------------------------------Diagram for the transition matrix---------------------------------------------#
 
 diagram::plotmat(t(trans_mat), name = c("Enumeration(1)", "Birth(2)", "Exit(3)","Entry(4)","Outmigration(5)",
                                         "Inmigration(6)","Death(7)"), lwd = 1.5, box.lwd = 2, cex.txt = 0.8, box.size = 0.11,  
@@ -43,19 +33,19 @@ diagram::plotmat(t(trans_mat), name = c("Enumeration(1)", "Birth(2)", "Exit(3)",
                  self.cex = .6, self.shifty = -.01, self.shiftx = .14, main = " ") #light blue (use green)
 
 
-##=============================================== Female data  =====================================================================
+#--------------------------------------------Female data---------------------------------------------------------------#
 
 
 Female_data <- NUHDSS_Resi_Data_2002_2015 %>% filter(gender_of_NUHDSS_individual %in% c('Female'))
 
-#========================================== chain of movement for model =============================================
+#-------------------------------------------chain of movement for model------------------------------------------------#
 
 (smatrix<-statetable.msm(Event, ID, data = Female_data)) 
 
 
 round(prop.table(smatrix, margin=1)*100, 0)
 
-#================================= Get initial estimates============================================================================
+#--------------------------------------------Get initial estimates-----------------------------------------------------#
 
 (Q<-matrix(c(0.09, 0, 0.08, 0,0.09,0,0.6,
              0, 0.4, 0.5, 0, 0.3, 0, 0.4,
@@ -67,65 +57,15 @@ round(prop.table(smatrix, margin=1)*100, 0)
 
 (Q.crude <- crudeinits.msm(Event_1 ~ days, ID, data = Female_data, qmatrix = Q))
 
-#-------------------------------------------Model without the covariates (simple bidirectional model)---------------------------#
+#----------------------------------Model without the covariates (simple bidirectional model)---------------------------#
+
 msm_model_female_simple <- msm(Event_1 ~ days, ID, data = Female_data , exacttimes = TRUE, gen.inits = T, qmatrix = Q.crude, 
                            control = list(fnscale = 6e+05, trace = 0, REPORT = 1, maxit = 100000), opt.method = "optim")
 
 
-set.seed(123)
-
-#-----------------------------------------cross-validation-------------------------------------------------------------#
-
-unique_ids <- unique(Female_data$ID)
-k <- 5 # Number of folds
-
-# Create folds based on unique IDs
-folds <- cut(seq(1, length(unique_ids)), breaks = k, labels = FALSE)
-cv_results_F <- list()
-
-# Perform K-fold cross-validation
-for(i in 1:k) {
-  test_ids_F <- unique_ids[folds == i]
-  train_ids_F <- setdiff(unique_ids, test_ids_F)
-  
-  # Subset training and test data
-  train_data_F <- Female_data[Female_data$ID %in% train_ids_F, ]
-  test_data_F <- Female_data[Female_data$ID %in% test_ids_F, ]
-  
-  # Fit the MSM model to the training data
-  msm_model_F <- msm(Event_1 ~ days, subject = ID, data = train_data_F, exacttimes = TRUE, gen.inits = T,
-                     covariates = ~ slum_area_in_NUHDSS  + ethnicity_of_NUHDSS_individual + 
-                       age_in_completed_years + type_of_area_in_Kenya_in_which_individual_was_born, qmatrix = Q.crude, 
-                     control = list(fnscale = 6e+05, trace = 0, REPORT = 1, maxit = 100000), opt.method = "optim")
-  
-  # Evaluate the model on the test data
-  predicted_probs <- pmatrix.msm(msm_model_F, t = 1, covariates = test_data_F)
-  
-  # Store log-likelihood as a performance metric
-  cv_results_F[[i]] <- logLik(msm_model_F)
-}
-
-# Calculate the average log-likelihood across all folds
-mean_log_likelihood_F <- mean(unlist(cv_results_F))
-print(mean_log_likelihood_F)
 
 
-#----------------------------------------Assess Out-of-Sample Prediction Accuracy---------------------------------------#
-
-
-# Fit the final full model data
-final_msm_model_F <- msm(Event_1 ~ days, ID, data = Female_data , exacttimes = TRUE, gen.inits = T,
-                         covariates = ~ slum_area_in_NUHDSS  + ethnicity_of_NUHDSS_individual + 
-                           age_in_completed_years + type_of_area_in_Kenya_in_which_individual_was_born, qmatrix = Q.crude, 
-                         control = list(fnscale = 6e+05, trace = 0, REPORT = 1, maxit = 100000), opt.method = "optim")
-
-# Predict transition probabilities for new/unseen data
-predicted_probs_test_F <- pmatrix.msm(final_msm_model_F, t = 1, covariates = test_data_F)
-
-# Compare predicted probabilities with actual observed transitions
-
-
-print("====================================== Final female model running ========================================================")
+print("----------------------------------Final female model running---------------------------------------------------")
 
 
 msm_model_female <- msm(Event_1 ~ days, ID, data = Female_data , exacttimes = TRUE, gen.inits = T,
@@ -138,40 +78,20 @@ msm_model_female
 
 save(msm_model_female, file="D:\\APHRC\\APHRC-projects\\MSM\\MSM-Residence-2024\\Data\\msm_model_female.RData")
 
-#--------------------------------------------------------goodness of fit----------------------------------------------------------#
+#---------------------------------------------goodness of fit----------------------------------------------------------#
 
 logLik(msm_model_female)
 
 lrtest(msm_model_female_simple, msm_model_female)
 
-#----------------------------------------cross-validation and prediction accuracy------------------------------------------------#
 
-set.seed(123)
-unique_ids <- unique(Female_data$ID)
-train_ids <- sample(unique_ids, size = 0.7 * length(unique_ids))
-train_data_f <- Female_data %>% filter(ID %in% train_ids)
-test_data_f <- Female_data %>% filter(!ID %in% train_ids)
+#---------------------------------------simulate date------------------------------------------------------------------#
 
-# Fit the model on the training data
-msm_model_train_f <- msm(Event_1 ~ days, ID, data = train_data_f, exacttimes = TRUE, gen.inits = TRUE,
-                         covariates = ~ slum_area_in_NUHDSS + ethnicity_of_NUHDSS_individual +
-                           age_in_completed_years + type_of_area_in_Kenya_in_which_individual_was_born, 
-                         qmatrix = Q.crude, control = list(fnscale = 6e+05, trace = 0, REPORT = 1, maxit = 100000), 
-                         opt.method = "optim")
+female_simulated_data = simfitted.msm(msm_model_female_simple_1)
 
-# Predict on the test data
-predicted_probabilities_f <- predict(msm_model_train_f, test_data_f)
 
-# Assess the prediction accuracy
-accuracy_f <- sum(predicted_probabilities_f == test_data_f$Event_1) / nrow(test_data_f)
-print(paste("Prediction Accuracy:", accuracy_f))
 
-#--------------------------------Extract transition rates and their confidence intervals----------------------------------------#
-trans_rates_f <- qmatrix.msm(msm_model_female)
-ci_trans_rates_f <- confint(msm_model_female)
-print(ci_trans_rates_f)
-
-#other rates
+#--------------------------------------------------other rates---------------------------------------------------------#
 
 qmatrix.msm(msm_model_female)
 pmatrix.msm(msm_model_female, t=2)
@@ -186,7 +106,7 @@ prev_plot = plot.prevalence.msm(x = msm_model_female, prev.obj = prev, exacttime
 
 summary(msm_model_female)
 
-#=============================== Plotting transition probabilities ===================================================
+#----------------------------------------Plotting transition probabilities---------------------------------------------#
 
 # 4901
 
@@ -224,52 +144,54 @@ plotdat<-plotdat %>%  filter(!Transitions %in% c("State 1 - 2","State 1 - 4","St
 
 ggplot(plotdat, aes(x = Time, y = Value, color = Transitions, group = Transitions)) +  geom_line(linewidth = 1) +  
   geom_point(size = 0.5) +  labs(x = "Time (Days)", y ="Transition probability", color = "Transitions", 
-                                 title = NULL) +   theme_bw() +
-  theme(axis.text.x = element_text(face = "bold", size = 10), axis.text.y = element_text(face = "bold", size = 10),
-        axis.title.x = element_text(face = "bold"), axis.title.y = element_text(face = "bold"),
-        legend.text = element_text(face = "bold"), legend.title = element_text(face = "bold"))
+      title = NULL) +   theme_bw() +
+  theme(axis.text.x = element_text(face = "bold", size = 12), 
+        axis.text.y = element_text(face = "bold", size = 12),
+        axis.title.x = element_text(face = "bold", size = 12), 
+        axis.title.y = element_text(face = "bold", size = 12),
+        legend.text = element_text(face = "bold", size = 12), 
+        legend.title = element_text(face = "bold", size = 12),
+        legend.text = element_text(face = "bold", size = 12))
 
 
+#-----------------------------------------the survival plots------------------------------------------------------------#
 
-
-#========================================the survival plots ===============================================
-
-
-
-
-prev <- prevalence.msm(msm_model_female)
-
+prev_female <- prevalence.msm(msm_model_female)
 
 # reshape observed prevalence
-do1 <-as_tibble(row.names(prev$Observed)) %>% rename(time = value) %>%  mutate(time = as.numeric(time))
 
-do2 <-as_tibble(prev$Observed) %>% mutate(type = "observed")
-do <- cbind(do1,do2) %>% select(-Total)
-do_l <- do %>% gather(state, number, -time, -type)
+do1_f <-as_tibble(row.names(prev_female$Observed)) %>% rename(time = value) %>%  mutate(time = as.numeric(time))
+
+do2_f <-as_tibble(prev_female$Observed) %>% mutate(type = "observed")
+do_f <- cbind(do1_m, do2_m) %>% select(-Total)
+do_l_f <- do_m %>% gather(state, number, -time, -type)
 
 
 # reshape expected prevalence
-de1 <-as_tibble(row.names(prev$Expected)) %>% rename(time = value) %>% mutate(time = as.numeric(time))
-de2 <-as_tibble(prev$Expected) %>% mutate(type = "expected")
-de <- cbind(de1,de2) %>% select(-Total) 
-de_l <- de %>% gather(state, number, -time, -type) 
+
+de1_f <-as_tibble(row.names(prev_female$Expected)) %>% rename(time = value) %>% mutate(time = as.numeric(time))
+de2_f <-as_tibble(prev_female$Expected) %>% mutate(type = "expected")
+de_f <- cbind(de1_f,de2_f) %>% select(-Total) 
+de_l_f <- de_f %>% gather(state, number, -time, -type) 
 
 
 # bind into a single data frame
-prev_l <-rbind(do_l,de_l) %>% mutate(type = factor(type),state = factor(state), time = round(time,3))
+prev_l_f <-rbind(do_l_f, de_l_f) %>% mutate(type = factor(type),state = factor(state), time = round(time,3))
 
 
 # plot for comparison
-prev_gp <- prev_l %>% group_by(state)
-pp <- prev_l %>% ggplot() +  geom_line(aes(time, number, color = type)) + xlab("time") +
-  ylab("") +   ggtitle("") + theme_bw()
+prev_gp_f <- prev_l_f %>% group_by(state)
 
-pp + facet_wrap(~state)
+prev_l_f %>% ggplot() +  geom_line(aes(time, number, color = type), linewidth = 1.2) +
+  labs(title = "", x = "Days",   y = "") + theme_bw() +  theme(
+    legend.title = element_blank(),
+    legend.text = element_text(size = 12),
+    axis.title.x = element_text(size = 12, face = "bold"),
+    axis.title.y = element_text(size = 12, face = "bold"),
+    axis.text.x = element_text(size = 10, face = "bold"),,
+    axis.text.y = element_text(size = 10, face = "bold"),
+  ) +
+  facet_wrap(~state, scales = "free_y", ncol = 2) +
+  scale_y_continuous(limits = c(0, 12000), breaks = seq(0, 12000, by = 3000)) 
 
-
-
-plot(msm_model_female)
-
-# plot_prep was obtained from plot.msm()
-res <- plot_prep(msm_model_female)
-
+#---------------------------------------------------------End-----------------------------------------------------------#

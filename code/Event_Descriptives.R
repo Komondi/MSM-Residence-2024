@@ -13,12 +13,12 @@ for(ilib in libs){
   library(ilib, character.only = T)
 }
 
-#--------------------------------------------Residency Data, 2002 to 2018---------------------------------------------#
+#--------------------------------------------Residency Data, 2002 to 2018----------------------------------------------#
 
 NUHDSS_Resi_Data  <- readRDS("D:\\APHRC\\APHRC-projects\\MSM\\MSM-Residence-2024\\Data\\NUHDSS_Final_Event_Data.rds")
 
 
-#---------------------------------Convert unique HHIDs to numerical values-------------------------------------------#
+#---------------------------------Convert unique HHIDs to numerical values---------------------------------------------#
 
 
 NUHDSS_Resi_Data$HHID <- as.numeric(factor(NUHDSS_Resi_Data$NUHDSS_socialgroup,
@@ -660,7 +660,7 @@ tab_NUHDSS_causes <- deaths_causes %>%  select(-c("ID", "Calender_Year") ) %>%  
 
 tab_NUHDSS_causes %>% as_gt() #-> tab_3
 
-#------------------------------------------------entry and exit------------------------------------------------------#
+#------------------------------------------------entry and exit-------------------------------------------------------#
 
 total_ids_per_year_ent_exit <- NUHDSS_Resi_Data_2002_2015 %>%  group_by(Calender_Year, gender_of_NUHDSS_individual) %>% 
   summarise(TotalUniqueIDs = n_distinct(ID), .groups = "drop")
@@ -1060,7 +1060,7 @@ total_population_per_slum <- NUHDSS_Resi_Data_2002_2015 %>% group_by(Calender_Ye
 Inmigration_Outmigration_data <- NUHDSS_Resi_Data_2002_2015 %>% filter(residency_event %in% c("Inmigration", "Outmigration"))
 
 
-# Calculate the number of exit and entry per year and slum
+# Calculate t
 
 Inmigration_Outmigration_counts_slum <- Inmigration_Outmigration_data %>%
   group_by(Calender_Year, slum_area_in_NUHDSS, residency_event) %>%  summarise(Count = n_distinct(ID), .groups = "drop")%>%   
@@ -1294,6 +1294,7 @@ ggplot(df_entry_exit_rates, aes(x = factor(Calender_Year), y = ExitRate,
   geom_line(linewidth = 1.2) +  geom_point(size = 1.2) +   
   labs(title = "", x = "",   y = "Exit rate per 1000 individuals") +
   theme_bw() +  theme(
+    legend.text = element_text(size = 14),
     legend.title = element_blank(),
     axis.title.x = element_text(size = 12, face = "bold"),
     axis.title.y = element_text(size = 12, face = "bold"),
@@ -1304,3 +1305,158 @@ ggplot(df_entry_exit_rates, aes(x = factor(Calender_Year), y = ExitRate,
   facet_wrap(~gender_of_NUHDSS_individual, scales = "free_y", ncol = 1) +
   scale_x_discrete(breaks = unique(rates_slum_gender$Calender_Year)) +
   scale_y_continuous(limits = c(0, 400), breaks = seq(0, 400, by = 40))
+
+
+#------------------------------------------------age specific death rates---------------------------------------------#
+
+total_ids_fm <- NUHDSS_Resi_Data_2002_2015 %>%  group_by( Calender_Year, age_cat) %>%
+  summarise(TotalUniqueIDs = n_distinct(ID), .groups = "drop")
+
+# Filter data for birth and death events
+
+death_age_data <- NUHDSS_Resi_Data_2002_2015 %>% filter(residency_event %in% c('Death'))
+
+
+# Calculate the number of deaths per year, slum area, gender, age cat, and event
+
+death_counts_data <- death_age_data %>% 
+  group_by( Calender_Year, slum_area_in_NUHDSS, residency_event, age_cat) %>%
+  summarise(Count = n_distinct(ID), .groups = "drop") %>%
+  pivot_wider(names_from = residency_event, values_from = Count) %>%
+  left_join(total_ids_fm, by = c( "Calender_Year", "age_cat"))
+
+
+# Calculate birth and death rates per year, slum area, gender, age and event
+rates_slum_gender_age_cat <- death_counts_data %>% mutate( DeathRate = (Death / TotalUniqueIDs) * 1000)
+
+# plot
+
+death_line_plot <- ggplot(rates_slum_gender_age_cat, aes(x = factor(Calender_Year), y = DeathRate, 
+                 color = age_cat, group = age_cat)) + geom_line(linewidth = 1.2) +  geom_point(size = 1.2) +  
+                  labs(title = "", x = "", y = "Death rates per 1000 individuals") + theme_bw() +  
+  theme(
+    legend.title = element_blank(),
+    legend.text = element_text(size = 12),
+    axis.title.x = element_text(size = 12, face = "bold"),
+    axis.title.y = element_text(size = 12, face = "bold"),
+    axis.text.x = element_text(size = 10, face = "bold"),,
+    axis.text.y = element_text(size = 10, face = "bold"),
+  )+
+  scale_color_discrete(name = "Age") +
+  facet_wrap(~gender_of_NUHDSS_individual, scales = "free_y", ncol = 2) +
+  scale_x_discrete(breaks = unique(rates_slum_gender$Calender_Year)) +
+  scale_y_continuous(limits = c(0, 50), breaks = seq(0, 50, by = 5)); death_line_plot
+
+
+#slum_area_in_NUHDSS,
+ggplot(rates_slum_gender_age_cat, aes(x = factor(Calender_Year), y = DeathRate, 
+  color = age_cat, group = age_cat)) + geom_line(linewidth = 1.2) +  geom_point(size = 1.2) +  
+  labs(title = "", x = "", y = "Death rates per 1000 individuals") + theme_bw() +  
+  theme(
+    legend.title = element_blank(),
+    legend.text = element_text(size = 12),
+    axis.title.x = element_text(size = 12, face = "bold"),
+    axis.title.y = element_text(size = 12, face = "bold"),
+    axis.text.x = element_text(size = 10, face = "bold"),,
+    axis.text.y = element_text(size = 10, face = "bold"),
+  )+
+  scale_color_discrete(name = "Age") +
+  facet_wrap(~slum_area_in_NUHDSS, scales = "free_y", ncol = 2) +
+  scale_x_discrete(breaks = unique(rates_slum_gender$Calender_Year)) +
+  scale_y_continuous(limits = c(0, 70), breaks = seq(0, 70, by = 5))
+
+#-----------------------------------------age specific net-migration rates--------------------------------------------#
+
+total_pop <- NUHDSS_Resi_Data_2002_2015 %>% group_by(Calender_Year, age_cat) %>%
+  summarise(TotalUniqueIDs = n_distinct(ID), .groups = "drop")
+
+age_migration_data <- NUHDSS_Resi_Data_2002_2015 %>% filter(residency_event %in% c("Inmigration", "Outmigration"))
+
+
+# Calculate the number 
+
+age_migration_counts <- age_migration_data %>% 
+  group_by(Calender_Year,  residency_event, slum_area_in_NUHDSS, age_cat) %>%  
+  summarise(Count = n_distinct(ID), .groups = "drop")%>%   
+  pivot_wider(names_from = residency_event, values_from = Count) %>%
+  left_join(total_pop, by = c("Calender_Year", "age_cat")) 
+
+
+age_migration_counts$Net_migration <- age_migration_counts$Inmigration - age_migration_counts$Outmigration
+
+
+age_rates_overall <- age_migration_counts %>%
+  mutate(InmigrationRate = (Inmigration / TotalUniqueIDs) * 1000, 
+         OutmigrationRate = (Outmigration / TotalUniqueIDs) * 1000, 
+         Overall_NetRate = (Net_migration / TotalUniqueIDs) * 1000)
+
+age_rates_overall <- age_rates_overall %>% rename(Year = Calender_Year)
+
+gt(age_rates_overall) %>% fmt_number( decimals = 1)
+
+
+
+ggplot(age_rates_overall, aes(x = factor(Year), y = Overall_NetRate, 
+  color = age_cat, group = age_cat)) + geom_line(linewidth = 1.2) +  geom_point(size = 1.2) +  
+  labs(title = "", x = "", y = "Overall net migration per 1000 individuals") + theme_bw() +  
+  theme(
+    legend.title = element_blank(),
+    legend.text = element_text(size = 12),
+    axis.title.x = element_text(size = 12, face = "bold"),
+    axis.title.y = element_text(size = 12, face = "bold"),
+    axis.text.x = element_text(size = 10, face = "bold"),,
+    axis.text.y = element_text(size = 10, face = "bold"),
+  )+
+  scale_color_discrete(name = "Age") +
+  facet_wrap(~slum_area_in_NUHDSS, scales = "free_y", ncol = 2) +
+  scale_x_discrete(breaks = unique(age_rates_overall$Year)) +
+  scale_y_continuous(limits = c(-140, 170), breaks = seq(-140, 170, by = 25))
+
+
+#-----------------------------------------age specific exit/entry rates------------------------------------------------#
+
+total_pop_int <- NUHDSS_Resi_Data_2002_2015 %>% group_by(Calender_Year, age_cat) %>%
+  summarise(TotalUniqueIDs = n_distinct(ID), .groups = "drop")
+
+age_internal_data <- NUHDSS_Resi_Data_2002_2015 %>% filter(residency_event %in% c("Exit", "Entry"))
+
+
+# Calculate the number 
+
+age_internal_counts <- age_internal_data %>% 
+  group_by(Calender_Year,  residency_event, gender_of_NUHDSS_individual, age_cat) %>%  
+  summarise(Count = n_distinct(ID), .groups = "drop")%>%   
+  pivot_wider(names_from = residency_event, values_from = Count) %>%
+  left_join(total_pop_int, by = c("Calender_Year", "age_cat")) 
+
+
+
+
+
+age_rates_internal <- age_internal_counts %>%
+  mutate(ExitRate = (Exit / TotalUniqueIDs) * 1000, 
+         EntryRate = (Entry / TotalUniqueIDs) * 1000)
+
+age_rates_internal <- age_rates_internal %>% rename(Year = Calender_Year)
+
+gt(age_rates_internal) %>% fmt_number( decimals = 1)
+
+
+
+ggplot(age_rates_internal, aes(x = factor(Year), y = EntryRate, 
+  color = age_cat, group = age_cat)) + geom_line(linewidth = 1.2) +  geom_point(size = 1.2) +  
+  labs(title = "", x = "", y = "Entry rates per 1000 individuals") + theme_bw() +  
+  theme(
+    legend.title = element_blank(),
+    legend.text = element_text(size = 12),
+    axis.title.x = element_text(size = 12, face = "bold"),
+    axis.title.y = element_text(size = 12, face = "bold"),
+    axis.text.x = element_text(size = 10, face = "bold"),,
+    axis.text.y = element_text(size = 10, face = "bold"),
+  )+
+  scale_color_discrete(name = "Age") +
+  facet_wrap(~gender_of_NUHDSS_individual, scales = "free_y", ncol = 2) +
+  scale_x_discrete(breaks = unique(age_rates_internal$Year)) +
+  scale_y_continuous(limits = c(0, 280), breaks = seq(0, 280, by = 40))
+
+
