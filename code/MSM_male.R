@@ -122,7 +122,7 @@ for (i in 1:7){
         to_plot$Value[l] <- pmatrix.msm(msm_model_male, t=k)[i,j]
         
       }
-      plotdat<-rbind(to_plot, plotdat_male)
+      plotdat_male <-rbind(to_plot, plotdat_male)
     }
   }
 }
@@ -189,7 +189,7 @@ prev_l_m %>% ggplot() +  geom_line(aes(time, number, color = type), linewidth = 
     legend.text = element_text(size = 12),
     axis.title.x = element_text(size = 12, face = "bold"),
     axis.title.y = element_text(size = 12, face = "bold"),
-    axis.text.x = element_text(size = 10, face = "bold"),,
+    axis.text.x = element_text(size = 10, face = "bold"),
     axis.text.y = element_text(size = 10, face = "bold"),
   ) +
   facet_wrap(~state, scales = "free_y", ncol = 2) +

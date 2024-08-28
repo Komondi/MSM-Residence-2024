@@ -1458,5 +1458,7 @@ ggplot(age_rates_internal, aes(x = factor(Year), y = EntryRate,
   facet_wrap(~gender_of_NUHDSS_individual, scales = "free_y", ncol = 2) +
   scale_x_discrete(breaks = unique(age_rates_internal$Year)) +
   scale_y_continuous(limits = c(0, 280), breaks = seq(0, 280, by = 40))
+#---------------------------------------------------------End-----------------------------------------------------------#
+
 
 

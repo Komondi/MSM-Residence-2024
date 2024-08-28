@@ -87,7 +87,7 @@ lrtest(msm_model_female_simple, msm_model_female)
 
 #---------------------------------------simulate date------------------------------------------------------------------#
 
-female_simulated_data = simfitted.msm(msm_model_female_simple_1)
+female_simulated_data = simfitted.msm(msm_model_female)
 
 
 
