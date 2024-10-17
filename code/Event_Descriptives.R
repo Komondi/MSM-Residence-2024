@@ -1483,7 +1483,56 @@ ggplot(age_rates_internal, aes(x = factor(Year), y = EntryRate,
   facet_wrap(~gender_of_NUHDSS_individual, scales = "free_y", ncol = 2) +
   scale_x_discrete(breaks = unique(age_rates_internal$Year)) +
   scale_y_continuous(limits = c(0, 280), breaks = seq(0, 280, by = 40))
-#---------------------------------------------------------End-----------------------------------------------------------#
+#---------------------------------------------------------End----------------------------------------------------------#
+
+#--------------------------------------------------Revision 2----------------------------------------------------------#
+
+#-----------------------------------------age group specific net-migration rates---------------------------------------#
+
+total_pop_rev_2 <- NUHDSS_Resi_Data_2002_2015 %>% group_by(Calender_Year, age_in_completed_years) %>%
+  summarise(TotalUniqueIDs = n_distinct(ID), .groups = "drop")
+
+age_migration_data_rev_2 <- NUHDSS_Resi_Data_2002_2015 %>% filter(residency_event %in% c("Inmigration", "Outmigration"))
+
+
+# Calculate the number 
+
+age_migration_counts_rev_2 <- age_migration_data_rev_2 %>% 
+  group_by(Calender_Year,  residency_event, gender_of_NUHDSS_individual, age_in_completed_years) %>%  
+  summarise(Count = n_distinct(ID), .groups = "drop")%>%   
+  pivot_wider(names_from = residency_event, values_from = Count) %>%
+  left_join(total_pop_rev_2, by = c("Calender_Year", "age_in_completed_years")) 
+
+
+age_migration_counts_rev_2$Net_migration <- age_migration_counts_rev_2$Inmigration - age_migration_counts_rev_2$Outmigration
+
+
+age_rates_overall_rev_2 <- age_migration_counts_rev_2 %>%
+  mutate(InmigrationRate = (Inmigration / TotalUniqueIDs) * 1000, 
+         OutmigrationRate = (Outmigration / TotalUniqueIDs) * 1000, 
+         Overall_NetRate = (Net_migration / TotalUniqueIDs) * 1000)
+
+age_rates_overall_rev_2 <- age_rates_overall_rev_2 %>% rename(Year = Calender_Year)
+
+gt(age_rates_overall_rev_2) %>% fmt_number( decimals = 1)
+
+na.omit(age_rates_overall_rev_2)
+
+
+
+ggplot(age_rates_overall_rev_2, aes(x = age_in_completed_years, y = Overall_NetRate)) + geom_line(linewidth = 1.2) +  geom_point(size = 1.2) +  
+  labs(title = "", x = "", y = "Overall net migration per 1000 individuals") + theme_bw() +  
+  theme(
+    legend.title = element_blank(),
+    legend.text = element_text(size = 12,  face = "bold"),
+    axis.title.x = element_text(size = 12, face = "bold"),
+    axis.title.y = element_text(size = 12, face = "bold"),
+    axis.text.x = element_text(size = 12, face = "bold"),,
+    axis.text.y = element_text(size = 12, face = "bold"),
+    strip.text = element_text(size = 12, face = "bold")
+  )+
+  scale_color_discrete(name = "Age") +
+  facet_wrap(~Year, scales = "free_y", ncol = 5) 
 
 
 
