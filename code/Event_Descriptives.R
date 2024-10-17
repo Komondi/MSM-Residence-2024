@@ -459,10 +459,12 @@ birth_trend_line_plot <- ggplot(rates_slum_gender, aes(x = factor(Calender_Year)
        x = "", y = "Birth rates per 1000 individuals") +
   theme_bw() +  theme(
     legend.title = element_blank(),
+    legend.text = element_text(size = 12, face = "bold"),
     axis.title.x = element_text(size = 12, face = "bold"),
     axis.title.y = element_text(size = 12, face = "bold"),
-    axis.text.x = element_text(size = 10, face = "bold"),,
-    axis.text.y = element_text(size = 10, face = "bold"),
+    axis.text.x = element_text(size = 12, face = "bold"),,
+    axis.text.y = element_text(size = 12, face = "bold"),
+    strip.text = element_text(size = 12, face = "bold")
   )+
   scale_color_discrete(name = "Slum Area") +
   facet_wrap(~gender_of_NUHDSS_individual, scales = "free_y", ncol = 1) +
@@ -481,10 +483,12 @@ death_trend_line_plot <- ggplot(rates_slum_gender, aes(x = factor(Calender_Year)
        x = "",   y = "Death rate per 1000 individuals") +
   theme_bw() +  theme(
     legend.title = element_blank(),
+    legend.text = element_text(size = 12, face = "bold"),
     axis.title.x = element_text(size = 12, face = "bold"),
     axis.title.y = element_text(size = 12, face = "bold"),
-    axis.text.x = element_text(size = 10, face = "bold"),,
-    axis.text.y = element_text(size = 10, face = "bold"),
+    axis.text.x = element_text(size = 12, face = "bold"),,
+    axis.text.y = element_text(size = 12, face = "bold"),
+    strip.text = element_text(size = 12, face = "bold")
   )+
   scale_color_discrete(name = "Slum Area") +
   facet_wrap(~gender_of_NUHDSS_individual, scales = "free_y", ncol = 1) +
@@ -1160,8 +1164,9 @@ ggplot(long_data_combined_rates, aes(x = Year, y = Rate, color = NetRate, group 
   theme_bw() + theme(legend.title = element_blank(),
     axis.title.x = element_text(size = 12, face = "bold"),
     axis.title.y = element_text(size = 12, face = "bold"),
-    axis.text.x = element_text(size = 10, face = "bold"),,
-    axis.text.y = element_text(size = 10, face = "bold"),
+    axis.text.x = element_text(size = 12, face = "bold"),,
+    axis.text.y = element_text(size = 12, face = "bold"),
+    legend.text = element_text(face = "bold", size = 12)
   )
 
 
@@ -1186,9 +1191,13 @@ ggplot(long_df_gen_Net_rates, aes(x = Year, y = Rate, color = NetRate, group = N
   theme_bw() + theme(legend.title = element_blank(),
     axis.title.x = element_text(size = 12, face = "bold"),
     axis.title.y = element_text(size = 12, face = "bold"),
-    axis.text.x = element_text(size = 10, face = "bold"),,
-    axis.text.y = element_text(size = 10, face = "bold"),
+    axis.text.x = element_text(size = 12, face = "bold"),,
+    axis.text.y = element_text(size = 12, face = "bold"),
+    legend.text = element_text(face = "bold", size = 12)
   )
+
+
+
 
 
 #-------------------------------------------Birth and death-----------------------------------------------------------#
@@ -1275,11 +1284,12 @@ df_entry_exit_rates <- df_counts %>%
   labs(title = "", x = "", y = "Entry rates per 1000 individuals") +
   theme_bw() +  theme(
     legend.title = element_blank(),
-    legend.text = element_text(size = 14),
+    legend.text = element_text(size = 12, face = "bold"),
     axis.title.x = element_text(size = 12, face = "bold"),
     axis.title.y = element_text(size = 12, face = "bold"),
     axis.text.x = element_text(size = 10, face = "bold"),,
     axis.text.y = element_text(size = 10, face = "bold"),
+    strip.text = element_text(size = 12, face = "bold")
   )+
   scale_color_discrete(name = "Slum Area") +
   facet_wrap(~gender_of_NUHDSS_individual, scales = "free_y", ncol = 1) +
@@ -1294,12 +1304,13 @@ ggplot(df_entry_exit_rates, aes(x = factor(Calender_Year), y = ExitRate,
   geom_line(linewidth = 1.2) +  geom_point(size = 1.2) +   
   labs(title = "", x = "",   y = "Exit rate per 1000 individuals") +
   theme_bw() +  theme(
-    legend.text = element_text(size = 14),
+    legend.text = element_text(size = 12, face = "bold"),
     legend.title = element_blank(),
     axis.title.x = element_text(size = 12, face = "bold"),
     axis.title.y = element_text(size = 12, face = "bold"),
     axis.text.x = element_text(size = 10, face = "bold"),,
     axis.text.y = element_text(size = 10, face = "bold"),
+    strip.text = element_text(size = 12, face = "bold")
   )+
   scale_color_discrete(name = "Slum Area") +
   facet_wrap(~gender_of_NUHDSS_individual, scales = "free_y", ncol = 1) +
@@ -1326,21 +1337,32 @@ death_counts_data <- death_age_data %>%
   left_join(total_ids_fm, by = c( "Calender_Year", "age_cat"))
 
 
+
+death_counts_data_gen <- death_age_data %>% 
+  group_by( Calender_Year, gender_of_NUHDSS_individual, residency_event, age_cat) %>%
+  summarise(Count = n_distinct(ID), .groups = "drop") %>%
+  pivot_wider(names_from = residency_event, values_from = Count) %>%
+  left_join(total_ids_fm, by = c( "Calender_Year", "age_cat"))
+
+
 # Calculate birth and death rates per year, slum area, gender, age and event
 rates_slum_gender_age_cat <- death_counts_data %>% mutate( DeathRate = (Death / TotalUniqueIDs) * 1000)
 
+
+rates_gender_age_cat <- death_counts_data_gen %>% mutate( DeathRate = (Death / TotalUniqueIDs) * 1000)
 # plot
 
-death_line_plot <- ggplot(rates_slum_gender_age_cat, aes(x = factor(Calender_Year), y = DeathRate, 
+death_line_plot <- ggplot(rates_gender_age_cat, aes(x = factor(Calender_Year), y = DeathRate, 
                  color = age_cat, group = age_cat)) + geom_line(linewidth = 1.2) +  geom_point(size = 1.2) +  
                   labs(title = "", x = "", y = "Death rates per 1000 individuals") + theme_bw() +  
   theme(
     legend.title = element_blank(),
-    legend.text = element_text(size = 12),
+    legend.text = element_text(size = 12,  face = "bold"),
     axis.title.x = element_text(size = 12, face = "bold"),
     axis.title.y = element_text(size = 12, face = "bold"),
-    axis.text.x = element_text(size = 10, face = "bold"),,
-    axis.text.y = element_text(size = 10, face = "bold"),
+    axis.text.x = element_text(size = 12, face = "bold"),,
+    axis.text.y = element_text(size = 12, face = "bold"),
+    strip.text = element_text(size = 12, face = "bold")
   )+
   scale_color_discrete(name = "Age") +
   facet_wrap(~gender_of_NUHDSS_individual, scales = "free_y", ncol = 2) +
@@ -1354,11 +1376,12 @@ ggplot(rates_slum_gender_age_cat, aes(x = factor(Calender_Year), y = DeathRate,
   labs(title = "", x = "", y = "Death rates per 1000 individuals") + theme_bw() +  
   theme(
     legend.title = element_blank(),
-    legend.text = element_text(size = 12),
+    legend.text = element_text(size = 12,  face = "bold"),
     axis.title.x = element_text(size = 12, face = "bold"),
     axis.title.y = element_text(size = 12, face = "bold"),
-    axis.text.x = element_text(size = 10, face = "bold"),,
-    axis.text.y = element_text(size = 10, face = "bold"),
+    axis.text.x = element_text(size = 12, face = "bold"),,
+    axis.text.y = element_text(size = 12, face = "bold"),
+    strip.text = element_text(size = 12, face = "bold")
   )+
   scale_color_discrete(name = "Age") +
   facet_wrap(~slum_area_in_NUHDSS, scales = "free_y", ncol = 2) +
@@ -1376,7 +1399,7 @@ age_migration_data <- NUHDSS_Resi_Data_2002_2015 %>% filter(residency_event %in%
 # Calculate the number 
 
 age_migration_counts <- age_migration_data %>% 
-  group_by(Calender_Year,  residency_event, slum_area_in_NUHDSS, age_cat) %>%  
+  group_by(Calender_Year,  residency_event, gender_of_NUHDSS_individual, age_cat) %>%  
   summarise(Count = n_distinct(ID), .groups = "drop")%>%   
   pivot_wider(names_from = residency_event, values_from = Count) %>%
   left_join(total_pop, by = c("Calender_Year", "age_cat")) 
@@ -1401,16 +1424,18 @@ ggplot(age_rates_overall, aes(x = factor(Year), y = Overall_NetRate,
   labs(title = "", x = "", y = "Overall net migration per 1000 individuals") + theme_bw() +  
   theme(
     legend.title = element_blank(),
-    legend.text = element_text(size = 12),
+    legend.text = element_text(size = 12,  face = "bold"),
     axis.title.x = element_text(size = 12, face = "bold"),
     axis.title.y = element_text(size = 12, face = "bold"),
-    axis.text.x = element_text(size = 10, face = "bold"),,
-    axis.text.y = element_text(size = 10, face = "bold"),
+    axis.text.x = element_text(size = 12, face = "bold"),,
+    axis.text.y = element_text(size = 12, face = "bold"),
+    strip.text = element_text(size = 12, face = "bold")
   )+
   scale_color_discrete(name = "Age") +
-  facet_wrap(~slum_area_in_NUHDSS, scales = "free_y", ncol = 2) +
+  facet_wrap(~gender_of_NUHDSS_individual, scales = "free_y", ncol = 2) +
   scale_x_discrete(breaks = unique(age_rates_overall$Year)) +
-  scale_y_continuous(limits = c(-140, 170), breaks = seq(-140, 170, by = 25))
+  scale_y_continuous(limits = c(-185, 145), breaks = seq(-185, 145, by = 25))
+#scale_y_continuous(limits = c(-140, 170), breaks = seq(-140, 170, by = 25))
 
 
 #-----------------------------------------age specific exit/entry rates------------------------------------------------#

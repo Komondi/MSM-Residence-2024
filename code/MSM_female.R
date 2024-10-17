@@ -14,7 +14,7 @@ for(ilib in libs){
 
 
 #--------------------------------------Residency Data, 2002 to 2015----------------------------------------------------#
-
+#replace with simulated data for learning (female simulated data)
 NUHDSS_Resi_Data_2002_2015 <- readRDS("D:\\APHRC\\APHRC-projects\\MSM\\MSM-Residence-2024\\Data\\NUHDSS_Final_MSM.rds")
 
 
@@ -35,7 +35,7 @@ diagram::plotmat(t(trans_mat), name = c("Enumeration(1)", "Birth(2)", "Exit(3)",
 
 #--------------------------------------------Female data---------------------------------------------------------------#
 
-
+#Do not use line 39. Use the loaded simulated data which is female data already
 Female_data <- NUHDSS_Resi_Data_2002_2015 %>% filter(gender_of_NUHDSS_individual %in% c('Female'))
 
 #-------------------------------------------chain of movement for model------------------------------------------------#
