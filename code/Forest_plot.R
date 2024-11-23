@@ -18,7 +18,7 @@ for(ilib in libs){
 
 load("D:\\APHRC\\APHRC-projects\\MSM\\MSM-Residence-2024\\Data\\male_all_hazard_data.RData")
 
-load("D:\\APHRC\\APHRC-projects\\MSM\\MSM-Residence-2024\\Data\\male_all_hazard_data.RData")
+load("D:\\APHRC\\APHRC-projects\\MSM\\MSM-Residence-2024\\Data\\female_all_hazard_data.RData")
 
 #---------------------------------------remove the row names from the data-------------------------------------------------#
 rownames(male_all_hazard_data) <- NULL
@@ -125,7 +125,6 @@ male_all_hazard_data$Group <- Group
 
 female_all_hazard_data$Group <- Group
 
-#-----------Rename the variable gender to model----#
 
 #------------------------------------------merge the datasets-------------------------------------------------------------#
 
@@ -138,24 +137,32 @@ final_data <- final_data %>% rename(Model = Gender)
 dotCOLS <- c("#a6d8f0", "#f9b282")
 barCOLS <- c("#008fd5", "#de6b35")
 
-ggplot(final_data, aes( x = HR, xmax = Upper_CI, xmin = Lower_CI, y = Transition, color = Gender, fill = Gender)) +
+ggplot(final_data, aes( x = HR, xmax = Upper_CI, xmin = Lower_CI, y = Transition, color = Model, fill = Model)) +
   geom_point(size = 3, shape = 18, position = position_dodge(width = 0.5)) +
   geom_linerange(position = position_dodge(width = 0.5), linewidth = 1) +
-  geom_vline(xintercept = 1, size = 1) + facet_grid(Covariate ~ ., scales = "free_y", space = "free_y") +
+  geom_vline(xintercept = 1, linewidth = 1) + facet_grid(Covariate ~ ., scales = "free_y", space = "free_y") +
   scale_alpha_identity() + scale_fill_manual(values = barCOLS) + scale_color_manual(values = dotCOLS) +
   scale_y_discrete(name = "Transitions")+ scale_x_continuous(name = "Hazard ratio", limits = c(0, 3)) +
-  geom_text(aes(label = Covariate), x = -Inf, y = Inf, hjust = 1, vjust = 1, check_overlap = TRUE, color = "darkgreen") +
-  coord_cartesian(clip = "off") +
+  geom_text(aes(label = Covariate), x = -Inf, y = Inf, hjust = 1, vjust = 1, check_overlap = TRUE, color = "red",
+            size = 4, fontface = "bold") +
+  coord_cartesian(clip = "off") + theme_bw() +
   theme(
     panel.background = element_blank(),
     panel.spacing = unit(0, "pt"),
     axis.line.x.bottom = element_line(linewidth = 1),
-    axis.text.y.left =  element_text(margin = margin(l = 20, unit = "pt")),
+    axis.text.y.left = element_text(size = 10, face = "bold", margin = margin(l = 20, unit = "pt")), 
+    axis.title.y = element_text(size = 10, face = "bold"),  
+    axis.title.x = element_text(size = 10, face = "bold"), 
+    axis.text.x = element_text(size = 10, face = "bold"),
+    legend.title = element_text(size = 10, face = "bold"), 
+    legend.text = element_text(size = 10, face = "bold"),
     strip.background = element_blank(), 
     strip.text = element_blank()
   )
-
 #---------------------------------Separate the covariates to one at a time-----------------------------------------------#
+
+#--------------------------------------------------Slum------------------------------------------------------------------#
+
 
 slum_data <- subset(final_data, Group == "Slum")
 
@@ -163,22 +170,169 @@ slum_data <- subset(final_data, Group == "Slum")
 dotCOLS <- c("#a6d8f0", "#f9b282")
 barCOLS <- c("#008fd5", "#de6b35")
 
-ggplot(slum_data, aes( x = HR, xmax = Upper_CI, xmin = Lower_CI, y = Transition, color = Gender, fill = Gender)) +
+slum <- ggplot(slum_data, aes( x = HR, xmax = Upper_CI, xmin = Lower_CI, y = Transition, color = Model, fill = Model)) +
   geom_point(size = 3, shape = 18, position = position_dodge(width = 0.5)) +
   geom_linerange(position = position_dodge(width = 0.5), linewidth = 1) +
   geom_vline(xintercept = 1, size = 1) + facet_grid(Covariate ~ ., scales = "free_y", space = "free_y") +
   scale_alpha_identity() + scale_fill_manual(values = barCOLS) + scale_color_manual(values = dotCOLS) +
   scale_y_discrete(name = "Transitions") + 
   scale_x_continuous(name = "Hazard ratio (Reference: Korogocho)", limits = c(0.5, 1.8)) +
-  geom_text(aes(label = Covariate), x = -Inf, y = Inf, hjust = 1, vjust = 1, check_overlap = TRUE, color = "darkgreen") +
+  geom_text(aes(label = Covariate), x = -Inf, y = Inf, hjust = 1, vjust = 1, check_overlap = TRUE, color = "red",
+            size = 4, fontface = "bold") +
   coord_cartesian(clip = "off") + theme_bw() +
   theme(
     panel.background = element_blank(),
     panel.spacing = unit(0, "pt"),
     axis.line.x.bottom = element_line(linewidth = 1),
-    axis.text.y.left =  element_text(margin = margin(l = 20, unit = "pt")),
+    axis.text.y.left = element_text(size = 10, face = "bold", margin = margin(l = 20, unit = "pt")), 
+    axis.title.y = element_text(size = 10, face = "bold"),  
+    axis.title.x = element_text(size = 10, face = "bold"), 
+    axis.text.x = element_text(size = 10, face = "bold"),
+    legend.title = element_text(size = 10, face = "bold"), 
+    legend.text = element_text(size = 10, face = "bold"),
     strip.background = element_blank(), 
     strip.text = element_blank()
   )
+
+ggsave(
+  filename = "D:\\APHRC\\APHRC-projects\\MSM\\MSM-Residence-2024\\Data\\slum.png",
+  plot = slum,
+  width =  10,
+  height = 7,
+  dpi = 300
+)
+
+ggsave(
+  filename = "D:\\APHRC\\APHRC-projects\\MSM\\MSM-Residence-2024\\Data\\slum.pdf",
+  plot = slum,
+  width =  10,
+  height = 7
+)
+#----------------------------------------------age----------------------------------------------------------------------#
+
+Age_data <- subset(final_data, Group == "Age")
+
+
+dotCOLS <- c("#a6d8f0", "#f9b282")
+barCOLS <- c("#008fd5", "#de6b35")
+
+Age <- ggplot(Age_data, aes( x = HR, xmax = Upper_CI, xmin = Lower_CI, y = Transition, color = Model, fill = Model)) +
+  geom_point(size = 3, shape = 18, position = position_dodge(width = 0.5)) +
+  geom_linerange(position = position_dodge(width = 0.5), linewidth = 1) +
+  geom_vline(xintercept = 1, size = 1) + facet_grid(Covariate ~ ., scales = "free_y", space = "free_y") +
+  scale_alpha_identity() + scale_fill_manual(values = barCOLS) + scale_color_manual(values = dotCOLS) +
+  scale_y_discrete(name = "Transitions") + 
+  scale_x_continuous(name = "Hazard ratio", limits = c(0.85, 1.18)) +
+  geom_text(aes(label = Covariate), x = -Inf, y = Inf, hjust = 1, vjust = 1, check_overlap = TRUE, color = "red",
+            size = 4, fontface = "bold") +
+  coord_cartesian(clip = "off") + theme_bw() +
+  theme(
+    panel.background = element_blank(),
+    panel.spacing = unit(0, "pt"),
+    axis.line.x.bottom = element_line(linewidth = 1),
+    axis.text.y.left = element_text(size = 10, face = "bold", margin = margin(l = 20, unit = "pt")), 
+    axis.title.y = element_text(size = 10, face = "bold"),  
+    axis.title.x = element_text(size = 10, face = "bold"), 
+    axis.text.x = element_text(size = 10, face = "bold"),
+    legend.title = element_text(size = 10, face = "bold"), 
+    legend.text = element_text(size = 10, face = "bold"),
+    strip.background = element_blank(), 
+    strip.text = element_blank()
+  )
+
+ggsave(
+  filename = "D:\\APHRC\\APHRC-projects\\MSM\\MSM-Residence-2024\\Data\\Age.png",
+  plot = Age,
+  width =  10,
+  height = 7,
+  dpi = 300
+)
+
+
+#----------------------------------------------Ethnicity-----------------------------------------------------------------#
+
+Ethnicity_data <- subset(final_data, Group == "Ethnicity")
+
+dotCOLS <- c("#a6d8f0", "#f9b282")
+barCOLS <- c("#008fd5", "#de6b35")
+
+Ethnicity <- ggplot(Ethnicity_data, aes( x = HR, xmax = Upper_CI, xmin = Lower_CI, y = Transition, color = Model, fill = Model)) +
+  geom_point(size = 3, shape = 18, position = position_dodge(width = 0.5)) +
+  geom_linerange(position = position_dodge(width = 0.5), linewidth = 1) +
+  geom_vline(xintercept = 1, size = 1) + facet_grid(Covariate ~ ., scales = "free_y", space = "free_y") +
+  scale_alpha_identity() + scale_fill_manual(values = barCOLS) + scale_color_manual(values = dotCOLS) +
+  scale_y_discrete(name = "Transitions") + 
+  scale_x_continuous(name = "Hazard ratio (Reference: Kamba)", limits = c(0, 3.0)) +
+  geom_text(aes(label = Covariate), x = -Inf, y = Inf, hjust = 1, vjust = 1, check_overlap = TRUE, color = "red",
+            size = 2, fontface = "bold") +
+  coord_cartesian(clip = "off") + theme_bw() +
+  theme(
+    panel.background = element_blank(),
+    panel.spacing = unit(0, "pt"),
+    axis.line.x.bottom = element_line(linewidth = 1),
+    axis.text.y.left = element_text(size = 6, face = "bold", margin = margin(l = 20, unit = "pt")), 
+    axis.title.y = element_text(size = 10, face = "bold"),  
+    axis.title.x = element_text(size = 10, face = "bold"), 
+    axis.text.x = element_text(size = 10, face = "bold"),
+    legend.title = element_text(size = 10, face = "bold"), 
+    legend.text = element_text(size = 10, face = "bold"),
+    strip.background = element_blank(), 
+    strip.text = element_blank()
+  )
+
+ggsave(
+  filename = "D:\\APHRC\\APHRC-projects\\MSM\\MSM-Residence-2024\\Data\\Ethnicity.png",
+  plot = Ethnicity,
+  width =  10,
+  height = 7,
+  dpi = 300
+)
+
+#----------------------------------------------Place of birth------------------------------------------------------------#
+
+Birth_data <- subset(final_data, Group == "Birth place")
+
+dotCOLS <- c("#a6d8f0", "#f9b282")
+barCOLS <- c("#008fd5", "#de6b35")
+
+
+Birth <- ggplot(Birth_data, aes( x = HR, xmax = Upper_CI, xmin = Lower_CI, y = Transition, color = Model, fill = Model)) +
+  geom_point(size = 3, shape = 18, position = position_dodge(width = 0.5)) +
+  geom_linerange(position = position_dodge(width = 0.5), linewidth = 1) +
+  geom_vline(xintercept = 1, size = 1) +
+  facet_grid(Covariate ~ ., scales = "free_y", space = "free_y") +
+  scale_alpha_identity() +
+  scale_fill_manual(values = barCOLS) +
+  scale_color_manual(values = dotCOLS) +
+  scale_y_discrete(name = "Transitions") + 
+  scale_x_continuous(name = "Hazard ratio (Reference: Nairobi Non slum)", limits = c(0.2, 2.2)) +
+  geom_text(aes(label = Covariate), x = -Inf, y = Inf, hjust = 1, vjust = 1, check_overlap = TRUE, 
+            color = "red", size = 2, fontface = "bold") +  
+  coord_cartesian(clip = "off") +
+  theme_bw() +
+  theme(
+    panel.background = element_blank(),
+    panel.spacing = unit(0, "pt"),
+    axis.line.x.bottom = element_line(linewidth = 1),
+    axis.text.y.left = element_text(size = 6, face = "bold", margin = margin(l = 20, unit = "pt")), 
+    axis.title.y = element_text(size = 10, face = "bold"),  
+    axis.title.x = element_text(size = 10, face = "bold"), 
+    axis.text.x = element_text(size = 10, face = "bold"),
+    legend.title = element_text(size = 10, face = "bold"), 
+    legend.text = element_text(size = 10, face = "bold"),
+    strip.background = element_blank(), 
+    strip.text = element_blank()
+  )
+
+ggsave(
+  filename = "D:\\APHRC\\APHRC-projects\\MSM\\MSM-Residence-2024\\Data\\Birth.png",
+  plot = Birth,
+  width =  10,
+  height = 7,
+  dpi = 300
+)
+#-----------------------------------------------------End----------------------------------------------------------------#
+
+
 
 
