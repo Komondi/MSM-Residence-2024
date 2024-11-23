@@ -194,4 +194,48 @@ prev_l_f %>% ggplot() +  geom_line(aes(time, number, color = type), linewidth = 
   facet_wrap(~state, scales = "free_y", ncol = 2) +
   scale_y_continuous(limits = c(0, 12000), breaks = seq(0, 12000, by = 3000)) 
 
+
+#------------------------------------------Forest plots-----------------------------------------------------------------#
+#------------------Extract the hazard ratios (HRs), confidence intervals (CIs)------------------------------------------#
+
+
+summary_model_female <- summary(msm_model_female)
+
+
+#--------------------------------------Extract covariate effects--------------------------------------------------------#
+hazard_data <- summary_model_female$hazard$`slum_area_in_NUHDSSViwandani`
+hazard_data <- data.frame(
+  Transition = rownames(hazard_data),
+  HR = hazard_data[, "HR"],
+  Lower_CI = hazard_data[, "L"],
+  Upper_CI = hazard_data[, "U"],
+  Covariate = "slum_area_in_NUHDSSViwandani"
+)
+
+rownames(hazard_data) <- NULL
+
+
+#--------------------------------Combine data for multiple covariates----------------------------------------------------#
+all_hazard_data <- do.call(rbind, lapply(names(summary_model_female$hazard), function(covariate) {
+  hazard <- summary_model_female$hazard[[covariate]]
+  data.frame(
+    Transition = rownames(hazard),
+    HR = hazard[, "HR"],
+    Lower_CI = hazard[, "L"],
+    Upper_CI = hazard[, "U"],
+    Covariate = covariate
+  )
+}))
+
+#----------------------------- Remove duplicate rows (if any)------------------------------------------------------------#
+all_hazard_data <- unique(all_hazard_data)
+
+#---------------------------------------------Save the dataset-----------------------------------------------------------#
+
+save(all_hazard_data, file="~/Evans/female_all_hazard_data.RData")
+
+
+write.csv(all_hazard_data, file="~/Evans/female_all_hazard_data.csv", row.names = FALSE)
+
+
 #---------------------------------------------------------End-----------------------------------------------------------#

@@ -195,7 +195,51 @@ prev_l_m %>% ggplot() +  geom_line(aes(time, number, color = type), linewidth = 
   facet_wrap(~state, scales = "free_y", ncol = 2) +
   scale_y_continuous(limits = c(0, 12000), breaks = seq(0, 12000, by = 3000)) 
 
-#---------------------------------------------------------End-----------------------------------------------------------#
+
+
+#-------------------------------------Extract data for forest plo---------------------------------------------------------#
+
+#------------------Extract the hazard ratios (HRs), confidence intervals (CIs)--------------------------------------------#
+
+
+summary_model_male <- summary(msm_model_male)
+
+
+#--------------------------------------Extract covariate effects----------------------------------------------------------#
+hazard_data_male <- summary_model_male$hazard$`slum_area_in_NUHDSSViwandani`
+hazard_data_male <- data.frame(
+  Transition = rownames(hazard_data_male),
+  HR = hazard_data_male[, "HR"],
+  Lower_CI = hazard_data_male[, "L"],
+  Upper_CI = hazard_data_male[, "U"],
+  Covariate = "slum_area_in_NUHDSSViwandani"
+)
+
+rownames(hazard_data_male) <- NULL
+
+
+#--------------------------------Combine data for multiple covariates-----------------------------------------------------#
+male_all_hazard_data <- do.call(rbind, lapply(names(summary_model_male$hazard), function(covariate) {
+  hazard <- summary_model_male$hazard[[covariate]]
+  data.frame(
+    Transition = rownames(hazard),
+    HR = hazard[, "HR"],
+    Lower_CI = hazard[, "L"],
+    Upper_CI = hazard[, "U"],
+    Covariate = covariate
+  )
+}))
+
+#----------------------------- Remove duplicate rows (if any)-------------------------------------------------------------#
+male_all_hazard_data <- unique(male_all_hazard_data)
+
+#---------------------------------------------Save the dataset------------------------------------------------------------#
+
+save(male_all_hazard_data, file="~/Evans/male_all_hazard_data.RData")
+
+write.csv(male_all_hazard_data, file="~/Evans/male_all_hazard_data.csv", row.names = FALSE)
+
+#---------------------------------------------------------End-------------------------------------------------------------#
 
 
 
